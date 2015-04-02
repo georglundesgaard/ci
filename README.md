@@ -1,2 +1,2 @@
-# ci
-A simple CI server that get the job done.
+# Simply CI
+A simple CI server that gets the job done.
