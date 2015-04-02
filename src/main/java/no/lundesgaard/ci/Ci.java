@@ -3,6 +3,9 @@ package no.lundesgaard.ci;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ILock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,8 +14,11 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
 
 public class Ci {
+	private final static Logger LOGGER = LoggerFactory.getLogger(Ci.class);
+
 	private final String rootDir;
 
 	public Ci(String rootDir) {
@@ -20,8 +26,11 @@ public class Ci {
 	}
 
 	public void run() throws Exception {
+		LOGGER.debug("started...");
 		Config config = new Config();
+		config.setProperty("hazelcast.logging.type", "slf4j");
 		HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(config);
+		Job currentJob = null;
 		try {
 			File root = new File(rootDir);
 			File jobs = new File(root, "jobs");
@@ -47,32 +56,57 @@ public class Ci {
 						List<Job> jobList = hazelcastInstance.getList("jobs");
 						jobList.add(job);
 						file.delete();
+						LOGGER.debug("job with id <{}> added: {}", job.getId(), job.getName());
 					}
 				}
 				if (commands.exists()) {
 					File[] commandFiles = commands.listFiles();
 					for (File commandFile : commandFiles) {
-						if ("shutdown".equalsIgnoreCase(commandFile.getName())) {
-							commandFile.delete();
+						String command = commandFile.getName();
+						commandFile.delete();
+						if ("shutdown".equalsIgnoreCase(command)) {
+							LOGGER.debug("shutdown command accepted");
 							break mainLoop;
 						}
 					}
 				}
-				List<Job> jobList = hazelcastInstance.getList("jobs");
-				if (!jobList.isEmpty()) {
-					Job job = jobList.remove(0);
-					if (!workspaces.exists()) {
-						workspaces.mkdir();
-					}
-					job.run(workspaces);
+				if (currentJob != null && !currentJob.isRunning()) {
+					currentJob = null;
 				}
+				Lock jobsLock = hazelcastInstance.getLock("jobsLock");
+				jobsLock.lock();
+				try {
+					List<Job> jobList = hazelcastInstance.getList("jobs");
+					if (!jobList.isEmpty() && currentJob == null) {
+						Job job = currentJob = jobList.remove(0);
+						LOGGER.debug("job with id <{}> and name <{}> accepted", job.getId(), job.getName());
+						if (!workspaces.exists()) {
+							workspaces.mkdir();
+						}
+						job.run(workspaces);
+					}
+				} finally {
+					jobsLock.unlock();
+				}
+				Thread.sleep(100);
 			}
 		} finally {
+			LOGGER.debug("shutting down...");
+			if (currentJob != null) {
+				try {
+					currentJob.stop();
+				} catch (Exception e) {
+					LOGGER.warn("Failed to stop job with id <{}> and name <{}>", currentJob.getId(), currentJob.getName(), e);
+				}
+			}
 			hazelcastInstance.shutdown();
+			LOGGER.debug("shutdown completed!");
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
-		new Ci(args[0]).run();
+		String root = args[0];
+		LOGGER.debug("root: {}", root);
+		new Ci(root).run();
 	}
 }
