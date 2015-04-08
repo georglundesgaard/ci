@@ -5,4 +5,19 @@ public class ShutdownCommand extends Command {
 
     private ShutdownCommand() {
     }
+
+    @Override
+    public void execute(Ci ci) {
+        throw new UnsupportedOperationException("shutdown command is not executable");
+    }
+
+    @Override
+    public void validate() {
+        throw new UnsupportedOperationException("shutdown command is not executable");
+    }
+
+    @Override
+    public Type type() {
+        return Type.SHUTDOWN;
+    }
 }
