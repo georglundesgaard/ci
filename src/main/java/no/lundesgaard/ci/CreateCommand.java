@@ -1,11 +1,8 @@
 package no.lundesgaard.ci;
 
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Properties;
 
 public abstract class CreateCommand extends Command {
@@ -19,12 +16,14 @@ public abstract class CreateCommand extends Command {
         try (FileReader commandReader = new FileReader(createCommandPath.toFile())) {
             commandProperties.load(commandReader);
         }
-        String subType = commandProperties.getProperty("sub-type", "unknown");
-        switch (subType) {
+        String type = commandProperties.getProperty("type", "unknown");
+        switch (type) {
             case "git-repo":
                 return new CreateGitRepoCommand(commandProperties);
+            case "task":
+                return CreateTaskCommand.from(commandProperties);
             default:
-                throw new IllegalArgumentException("invalid create command (subType=" + subType + ")");
+                throw new IllegalArgumentException("invalid create command (type=" + type + ")");
         }
     }
 }

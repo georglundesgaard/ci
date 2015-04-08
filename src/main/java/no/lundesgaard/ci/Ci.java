@@ -16,6 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Stream;
@@ -31,6 +33,7 @@ public class Ci implements Runnable {
     private final Path commandsPath;
     private final Path workspacesPath;
     private final Path jobsPath;
+    private final Path tasksPath;
     private HazelcastInstance hazelcastInstance;
     private JobRunner currentJobRunner;
     private boolean started;
@@ -53,14 +56,23 @@ public class Ci implements Runnable {
         this.commandsPath = rootPath.resolve("commands");
         this.workspacesPath = rootPath.resolve("workspaces");
         this.jobsPath = rootPath.resolve("jobs");
+        this.tasksPath = rootPath.resolve("tasks");
     }
 
     public Path getRepositoriesPath() {
         return repositoriesPath;
     }
 
+    public Path getWorkspacesPath() {
+        return workspacesPath;
+    }
+
     public Path getJobsPath() {
         return jobsPath;
+    }
+
+    public Path getTasksPath() {
+        return tasksPath;
     }
 
     @Override
@@ -76,6 +88,8 @@ public class Ci implements Runnable {
                 processCommand(command);
                 createNewJobs();
                 handleJobs();
+                scanTasks();
+                handleTasks();
                 sleep(100);
             }
             LOGGER.debug("shutdown (safe) command accepted");
@@ -102,6 +116,33 @@ public class Ci implements Runnable {
         }
     }
 
+    private void createNewJobs() throws IOException {
+        try (Stream<Path> jobPathStream = list(jobsPath)) {
+            jobPathStream
+                    .filter(path -> path.toString().endsWith(".sh"))
+                    .forEach(path -> {
+                        File file = path.toFile();
+                        try {
+                            String script = readScriptFile(file);
+                            String name = file.getName();
+                            String taskId = name.substring(0, name.length() - 3);
+                            Job job;
+                            if (taskMap().containsKey(taskId)) {
+                                job = new Job(UUID.randomUUID().toString(), name, script, taskId);
+                            } else {
+                                job = new Job(UUID.randomUUID().toString(), name, script);
+                            }
+                            jobList().add(job);
+                            LOGGER.debug("{} added", job);
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to read script file: {}", file, e);
+                        } finally {
+                            deleteFile(file);
+                        }
+                    });
+        }
+    }
+
     private void handleJobs() {
         if (currentJobRunner != null && currentJobRunner.isRunning()) {
             return;
@@ -109,7 +150,7 @@ public class Ci implements Runnable {
         Job job = nextJob();
         if (job != null) {
             LOGGER.debug("{} accepted", job);
-            currentJobRunner = new JobRunner(workspacesPath, job);
+            currentJobRunner = new JobRunner(this, job);
             new Thread(currentJobRunner).start();
         } else {
             currentJobRunner = null;
@@ -120,7 +161,7 @@ public class Ci implements Runnable {
         Lock jobsLock = hazelcastInstance.getLock("jobsLock");
         jobsLock.lock();
         try {
-            List<Job> jobList = hazelcastInstance.getList("jobs");
+            List<Job> jobList = jobList();
             if (jobList.isEmpty()) {
                 return null;
             }
@@ -131,24 +172,55 @@ public class Ci implements Runnable {
         }
     }
 
-    private void createNewJobs() throws IOException {
-        try (Stream<Path> jobPathStream = list(jobsPath)) {
-            jobPathStream
-                    .filter(path -> path.toString().endsWith(".sh"))
-                    .forEach(path -> {
-                        File file = path.toFile();
-                        try {
-                            String script = readScriptFile(file);
-                            Job job = new Job(UUID.randomUUID().toString(), file.getName(), script);
-                            List<Job> jobList = hazelcastInstance.getList("jobs");
-                            jobList.add(job);
-                            LOGGER.debug("{} added", job);
-                        } catch (IOException e) {
-                            LOGGER.error("Failed to read script file: {}", file, e);
-                        } finally {
-                            deleteFile(file);
-                        }
-                    });
+    private List<Job> jobList() {
+        return hazelcastInstance.getList("jobs");
+    }
+
+    private void scanTasks() throws IOException {
+        try (Stream<Path> taskPathStream = list(tasksPath)) {
+            taskPathStream
+                    .filter(path -> !path.getFileName().toString().startsWith("temp"))
+                    .forEach(this::scanTask);
+        }
+    }
+
+    private void scanTask(Path taskPath) {
+        Map<String, Task> taskMap = taskMap();
+        String taskId = taskPath.getFileName().toString();
+        if (!taskMap.containsKey(taskId)) {
+            try {
+                Task task = Task.from(taskPath);
+                taskMap.put(taskId, task);
+                LOGGER.debug("Task <{}> added: {}", taskId, task);
+            } catch (IOException e) {
+                LOGGER.error("Failed to scan task: {}", taskPath, e);
+            }
+        };
+    }
+
+    private void handleTasks() {
+        Map<String, Task> taskMap = taskMap();
+        for (String taskId : taskMap.keySet()) {
+            Task task = taskMap.get(taskId);
+            if (task.isReady() &&  task.isTriggerExpired()) {
+                LOGGER.debug("{}: task is ready and trigger has expired", task);
+                tryExecuteTask(taskMap, taskId, task);
+                return;
+            }
+        }
+    }
+
+    private void tryExecuteTask(Map<String, Task> taskMap, String taskId, Task task) {
+        Lock taskLock = hazelcastInstance.getLock(taskId);
+        if (!taskLock.tryLock()) {
+            return;
+        }
+        try {
+            task.execute(this, taskId);
+            taskMap.put(taskId, task);
+            LOGGER.debug("{} executed", task);
+        } finally {
+            taskLock.unlock();
         }
     }
 
@@ -177,7 +249,7 @@ public class Ci implements Runnable {
         Config config = new Config();
         config.setProperty("hazelcast.logging.type", "slf4j");
         hazelcastInstance = Hazelcast.newHazelcastInstance(config);
-        createDirectories(repositoriesPath, commandsPath, workspacesPath, jobsPath);
+        createDirectories(repositoriesPath, commandsPath, workspacesPath, jobsPath, tasksPath);
         LOGGER.debug("CI-server started");
         started = true;
     }
@@ -225,5 +297,25 @@ public class Ci implements Runnable {
         } catch (InterruptedException e) {
             LOGGER.warn("Sleep interrupted", e);
         }
+    }
+
+    public void stopTask(String taskId, Path taskPropertiesPath) throws IOException {
+        Map<String, Task> taskMap = taskMap();
+        Task task = taskMap.get(taskId);
+        if (exists(taskPropertiesPath)) {
+            Properties taskProperties = new Properties();
+            try (FileReader propertiesFile = new FileReader(taskPropertiesPath.toFile())) {
+                taskProperties.load(propertiesFile);
+            }
+            task.stop(taskProperties);
+        } else {
+            task.stop();
+        }
+        taskMap.put(taskId, task);
+        LOGGER.debug("{} task stopped", task);
+    }
+
+    private Map<String, Task> taskMap() {
+        return hazelcastInstance.getMap("tasks");
     }
 }

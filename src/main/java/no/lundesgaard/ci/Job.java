@@ -11,11 +11,20 @@ public class Job implements Serializable {
     private final String id;
     private final String name;
     private final String script;
+    private final String taskId;
+
+    public Job(String id, String name, String script, String taskId) {
+        this.id = id;
+        this.name = name;
+        this.script = script;
+        this.taskId = taskId;
+    }
 
     public Job(String id, String name, String script) {
         this.id = id;
         this.name = name;
         this.script = script;
+        this.taskId = null;
     }
 
     public String getId() {
@@ -28,6 +37,10 @@ public class Job implements Serializable {
 
     public String getScript() {
         return script;
+    }
+
+    public String getTaskId() {
+        return taskId;
     }
 
     @Override
@@ -55,6 +68,7 @@ public class Job implements Serializable {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                 .append("id", id)
                 .append("name", name)
+                .append("taskId", taskId)
                 .toString();
     }
 }

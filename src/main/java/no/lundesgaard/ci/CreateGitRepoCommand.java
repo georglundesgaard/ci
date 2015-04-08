@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 import java.util.UUID;
@@ -65,7 +64,7 @@ public class CreateGitRepoCommand extends CreateCommand {
 		);
 	}
 
-	private PrintWriter scriptWriter(Path scriptPath) throws IOException{
+	private PrintWriter scriptWriter(Path scriptPath) throws IOException {
 		return new PrintWriter(new FileWriter(scriptPath.toFile()));
 	}
 

@@ -15,23 +15,25 @@ import static java.nio.file.Files.createDirectory;
 public class JobRunner implements Runnable {
     private final static Logger LOGGER = LoggerFactory.getLogger(JobRunner.class);
 
-    private final Path workspace;
+    private final Ci ci;
     private final Job job;
     private Process process;
 
-    public JobRunner(Path workspaces, Job job) {
+    public JobRunner(Ci ci, Job job) {
+        this.ci = ci;
         this.job = job;
-        this.workspace = workspaces.resolve(job.getId());
     }
 
     @Override
     public void run() {
+        Path workspacesPath = ci.getWorkspacesPath();
+        Path workspacePath = workspacesPath.resolve(job.getId());;
         try {
-            createDirectory(workspace);
-            writeScriptFile();
-            File outputLog = workspace.resolve("output.log").toFile();
+            createDirectory(workspacePath);
+            writeScriptFile(workspacePath);
+            File outputLog = workspacePath.resolve("output.log").toFile();
             process = new ProcessBuilder("sh", job.getName())
-                    .directory(workspace.toFile())
+                    .directory(workspacePath.toFile())
                     .redirectOutput(appendTo(outputLog))
                     .redirectError(appendTo(outputLog))
                     .start();
@@ -41,14 +43,21 @@ public class JobRunner implements Runnable {
         }
         try {
             int exitCode = process.waitFor();
+            String taskId = job.getTaskId();
+            if (taskId != null) {
+                Path taskPropertiesPath = workspacePath.resolve(taskId);
+                ci.stopTask(taskId, taskPropertiesPath);
+            }
             LOGGER.debug("{} finished. Exit code: {}", this, exitCode);
         } catch (InterruptedException e) {
             LOGGER.warn("Waiting for process <{}> was interrupted.", process, e);
+        } catch (IOException e) {
+            LOGGER.error("I/O error", e);
         }
     }
 
-    private void writeScriptFile() throws IOException {
-        Path scriptPath = workspace.resolve(job.getName());
+    private void writeScriptFile(Path workspacePath) throws IOException {
+        Path scriptPath = workspacePath.resolve(job.getName());
         try (FileWriter fileWriter = new FileWriter(scriptPath.toFile())) {
             fileWriter.write(job.getScript());
         }

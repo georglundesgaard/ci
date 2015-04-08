@@ -14,8 +14,6 @@ import static java.nio.file.Files.list;
 import static java.util.stream.Collectors.toList;
 
 public abstract class Command {
-    private final static Logger LOGGER = LoggerFactory.getLogger(Command.class);
-
     public static Command from(Path commandPath) throws IOException {
         Type type = Type.from(commandPath);
         switch (type) {
