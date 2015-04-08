@@ -203,7 +203,7 @@ public class Ci implements Runnable {
         for (String taskId : taskMap.keySet()) {
             Task task = taskMap.get(taskId);
             if (task.isReady() &&  task.isTriggerExpired()) {
-                LOGGER.debug("{}: task is ready and trigger has expired", task);
+                LOGGER.debug("Task <{}> is ready and trigger has expired: {}", taskId, task);
                 tryExecuteTask(taskMap, taskId, task);
                 return;
             }
@@ -218,7 +218,7 @@ public class Ci implements Runnable {
         try {
             task.execute(this, taskId);
             taskMap.put(taskId, task);
-            LOGGER.debug("{} executed", task);
+            LOGGER.debug("Task <{}> executed: {}", taskId, task);
         } finally {
             taskLock.unlock();
         }
@@ -312,7 +312,7 @@ public class Ci implements Runnable {
             task.stop();
         }
         taskMap.put(taskId, task);
-        LOGGER.debug("{} task stopped", task);
+        LOGGER.debug("Task <{}> stopped: {}", taskId, task);
     }
 
     private Map<String, Task> taskMap() {

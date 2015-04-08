@@ -1,5 +1,8 @@
 package no.lundesgaard.ci;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
@@ -48,6 +51,15 @@ public abstract class Task implements Serializable {
 
 	public void stop(Properties taskProperties) {
 		stop();
+	}
+
+	@Override
+	public String toString() {
+		return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+				.append("trigger", trigger)
+				.append("running", running)
+				.append("lastExecuted", lastExecuted)
+				.toString();
 	}
 
 	public enum Type {

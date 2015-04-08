@@ -105,7 +105,10 @@ public class BuildTask extends Task {
 	@Override
 	public String toString() {
 		return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+				.appendSuper(super.toString())
 				.append("name", name)
+				.append("repoName", repoName)
+				.append("lastCommitId", lastCommitId)
 				.toString();
 	}
 }
