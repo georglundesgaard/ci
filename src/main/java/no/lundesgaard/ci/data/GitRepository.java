@@ -2,6 +2,8 @@ package no.lundesgaard.ci.data;
 
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.event.RepositoryUpdatedEvent;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,6 +17,7 @@ import static java.lang.ProcessBuilder.Redirect.appendTo;
 import static java.lang.String.format;
 import static java.nio.file.Files.list;
 import static java.time.Instant.now;
+import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public class GitRepository extends Repository {
 	private final String lastCommitId;
@@ -109,5 +112,13 @@ public class GitRepository extends Repository {
 					format("I/O error for process to read last commit id for repo <%s> with url <%s>",
 							name, url), e);
 		}
+	}
+
+	@Override
+	public String toString() {
+		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
+				.appendSuper(super.toString())
+				.append("lastCommitId", lastCommitId)
+				.toString();
 	}
 }

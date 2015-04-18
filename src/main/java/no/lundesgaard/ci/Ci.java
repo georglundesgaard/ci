@@ -4,6 +4,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import no.lundesgaard.ci.data.Data;
+import no.lundesgaard.ci.data.Repositories;
 import no.lundesgaard.ci.data.Repository;
 import no.lundesgaard.ci.data.hazelcast.HazelcastData;
 import no.lundesgaard.ci.data.simple.SimpleData;
@@ -434,6 +435,10 @@ public class Ci implements Runnable {
     }
 
     public void publishEvent(Event event) {
-        LOGGER.debug("{}", event);
+        LOGGER.debug("{} published", event);
+    }
+
+    public Repositories repositories() {
+        return data.repositories();
     }
 }

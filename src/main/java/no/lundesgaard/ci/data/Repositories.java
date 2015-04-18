@@ -35,4 +35,8 @@ public final class Repositories {
 				.collect(toList());
 		scannedRepositories.forEach(this::repository);
 	}
+
+	public int count() {
+		return repositoryMap.size();
+	}
 }

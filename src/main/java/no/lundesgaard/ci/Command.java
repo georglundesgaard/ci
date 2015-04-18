@@ -21,6 +21,8 @@ public abstract class Command {
                 return ShutdownCommand.INSTANCE;
             case CREATE:
                 return CreateCommand.from(commandPath);
+            case LIST:
+                return ListCommand.from(commandPath);
             default:
                 throw new UnsupportedOperationException("Command type <" + type + "> not implemented");
         }
@@ -55,7 +57,8 @@ public abstract class Command {
 
     public enum Type {
         SHUTDOWN,
-        CREATE;
+        CREATE,
+        LIST;
 
         public static Type from(Path commandPath) {
             String command = commandPath.getFileName().toString().toUpperCase();
