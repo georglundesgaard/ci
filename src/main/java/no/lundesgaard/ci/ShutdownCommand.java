@@ -1,5 +1,8 @@
 package no.lundesgaard.ci;
 
+import no.lundesgaard.ci.model.command.Command;
+import no.lundesgaard.ci.model.command.CommandType;
+
 public class ShutdownCommand extends Command {
     public static final ShutdownCommand INSTANCE = new ShutdownCommand();
 
@@ -17,7 +20,7 @@ public class ShutdownCommand extends Command {
     }
 
     @Override
-    public Type type() {
-        return Type.SHUTDOWN;
+    public CommandType type() {
+        return CommandType.SHUTDOWN;
     }
 }

@@ -1,9 +1,8 @@
-package no.lundesgaard.ci.data;
+package no.lundesgaard.ci.model.repository;
 
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.event.RepositoryUpdatedEvent;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,31 +27,35 @@ public class GitRepository extends Repository {
 	}
 
 	public GitRepository(GitRepository repository, Instant lastScan) {
-		super(repository, lastScan);
+		super(repository, lastScan, null);
 		this.lastCommitId = repository.lastCommitId;
 	}
 
-	public GitRepository(GitRepository repository, Instant lastScan, String lastCommitId) {
-		super(repository, lastScan);
+	public GitRepository(GitRepository repository, Instant lastScan, String lastError, String lastCommitId) {
+		super(repository, lastScan, lastError);
 		this.lastCommitId = lastCommitId;
 	}
 
 	@Override
 	public Repository scan(Ci ci) {
-		Path repositoriesPath = ci.getRepositoriesPath();
-		Path repositoryPath =  ci.createRepositoryDirectoryIfNotExists(this);
-		File outputLog = repositoriesPath.resolve(name + ".log").toFile();
-		if (isEmpty(repositoryPath)) {
-			cloneRepository(repositoryPath, outputLog);
-		} else {
-			updateRepository(repositoryPath, outputLog);
+		try {
+			Path repositoriesPath = ci.getRepositoriesPath();
+			Path repositoryPath = ci.createRepositoryDirectoryIfNotExists(this);
+			File outputLog = repositoriesPath.resolve(name + ".log").toFile();
+			if (isEmpty(repositoryPath)) {
+				cloneRepository(repositoryPath, outputLog);
+			} else {
+				updateRepository(repositoryPath, outputLog);
+			}
+			String lastCommitId = findLastCommitId(repositoryPath);
+			if (!lastCommitId.equals(this.lastCommitId)) {
+				ci.publishEvent(new RepositoryUpdatedEvent(this.name));
+				return new GitRepository(this, now(), null, lastCommitId);
+			}
+			return new GitRepository(this, now());
+		} catch (RuntimeException e) {
+			return new GitRepository(this, now(), e.getMessage(), null);
 		}
-		String lastCommitId = findLastCommitId(repositoryPath);
-		if (!lastCommitId.equals(this.lastCommitId)) {
-			ci.publishEvent(new RepositoryUpdatedEvent(this.name));
-			return new GitRepository(this, now(), lastCommitId);
-		}
-		return new GitRepository(this, now());
 	}
 
 	private boolean isEmpty(Path repositoryPath) {

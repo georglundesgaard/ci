@@ -9,16 +9,16 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Properties;
 
-public abstract class Task implements Serializable {
+public abstract class OldTask implements Serializable {
 	private final Trigger trigger;
 	private boolean running;
 	private Instant lastExecuted;
 
-	public Task(Properties taskProperties) {
+	public OldTask(Properties taskProperties) {
 		this.trigger = Trigger.valueOf(taskProperties.getProperty("trigger"));
 	}
 
-	public static Task from(Path taskPath) throws IOException {
+	public static OldTask from(Path taskPath) throws IOException {
 		String taskId = taskPath.getFileName().toString();
 		Type type = Type.from(taskId);
 		switch (type) {

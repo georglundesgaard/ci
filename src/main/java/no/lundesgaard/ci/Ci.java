@@ -3,13 +3,20 @@ package no.lundesgaard.ci;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import no.lundesgaard.ci.data.Data;
-import no.lundesgaard.ci.data.Repositories;
-import no.lundesgaard.ci.data.Repository;
-import no.lundesgaard.ci.data.hazelcast.HazelcastData;
-import no.lundesgaard.ci.data.simple.SimpleData;
+import no.lundesgaard.ci.model.TaskRunner;
+import no.lundesgaard.ci.model.Type;
+import no.lundesgaard.ci.model.command.Command;
+import no.lundesgaard.ci.model.data.Data;
+import no.lundesgaard.ci.model.repository.Repositories;
+import no.lundesgaard.ci.model.repository.Repository;
+import no.lundesgaard.ci.model.data.hazelcast.HazelcastData;
+import no.lundesgaard.ci.model.data.simple.SimpleData;
 import no.lundesgaard.ci.event.Event;
-import no.lundesgaard.ci.event.RepositoryUpdatedEvent;
+import no.lundesgaard.ci.model.task.Task;
+import no.lundesgaard.ci.model.task.TaskStatus;
+import no.lundesgaard.ci.model.task.TaskStatus.State;
+import no.lundesgaard.ci.model.task.TaskStatuses;
+import no.lundesgaard.ci.model.task.Tasks;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -31,9 +38,11 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Stream;
@@ -41,9 +50,8 @@ import java.util.stream.Stream;
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.isDirectory;
 import static java.nio.file.Files.list;
-import static java.time.Instant.now;
-import static no.lundesgaard.ci.Type.HAZELCAST;
-import static no.lundesgaard.ci.Type.SIMPLE;
+import static no.lundesgaard.ci.model.Type.HAZELCAST;
+import static no.lundesgaard.ci.model.Type.SIMPLE;
 
 public class Ci implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Ci.class);
@@ -55,13 +63,14 @@ public class Ci implements Runnable {
     private final Path commandsPath;
     private final Path workspacesPath;
     private final Path jobsPath;
-    private final Path tasksPath;
     private final Type type;
     private String nodeId;
     private Data data;
     private HazelcastInstance hazelcastInstance;
     private JobRunner currentJobRunner;
+    private TaskRunner currentTaskRunner;
     private boolean started;
+    private Queue<Event> eventQueue = new LinkedList<>();
 
     public static void main(String... args) throws Exception {
         Options options = options();
@@ -145,7 +154,6 @@ public class Ci implements Runnable {
         this.commandsPath = rootPath.resolve("commands");
         this.workspacesPath = rootPath.resolve("workspaces");
         this.jobsPath = rootPath.resolve("jobs");
-        this.tasksPath = rootPath.resolve("tasks");
     }
 
     public String nodeId() {
@@ -154,6 +162,10 @@ public class Ci implements Runnable {
 
     public Repository addRepository(Repository repository) {
         return data.repositories().repository(repository);
+    }
+
+    public Task addTask(Task task) {
+        return data.tasks().task(task);
     }
 
     public Path getRepositoriesPath() {
@@ -168,10 +180,6 @@ public class Ci implements Runnable {
         return jobsPath;
     }
 
-    public Path getTasksPath() {
-        return tasksPath;
-    }
-
     @Override
     public void run() {
         if (started) {
@@ -183,10 +191,11 @@ public class Ci implements Runnable {
             Command command;
             while ((command = nextCommand()) != ShutdownCommand.INSTANCE) {
                 processCommand(command);
-                data.repositories().scan(this);
+                scanRepositories();
+                processEventQueue();
+                runNextTask();
                 createNewJobs();
                 handleJobs();
-                scanTasks();
                 handleTasks();
                 sleep(100);
             }
@@ -207,7 +216,7 @@ public class Ci implements Runnable {
         Config config = new Config();
         config.setProperty("hazelcast.logging.type", "slf4j");
         hazelcastInstance = Hazelcast.newHazelcastInstance(config);
-        createDirectoriesIfNotExists(repositoriesPath, commandsPath, workspacesPath, jobsPath, tasksPath);
+        createDirectoriesIfNotExists(repositoriesPath, commandsPath, workspacesPath, jobsPath);
         if (type == HAZELCAST) {
             this.nodeId = hazelcastInstance.getLocalEndpoint().getUuid();
             this.data = new HazelcastData(hazelcastInstance);
@@ -244,6 +253,32 @@ public class Ci implements Runnable {
             command.execute(this);
         } catch (IllegalStateException e) {
             LOGGER.error("Invalid command: {}", command.type(), e);
+        }
+    }
+
+    private void scanRepositories() {
+        data.repositories().scan(this);
+    }
+
+    private void processEventQueue() {
+        while (!eventQueue.isEmpty()) {
+            eventQueue.remove().process(this);
+        }
+    }
+
+    private void runNextTask() {
+        if (currentTaskRunner != null && currentTaskRunner.isRunning()) {
+            // a task is already running
+            return;
+        }
+        String taskName = data.taskQueue().next();
+        if (taskName != null) {
+            Task task = data.tasks().task(taskName);
+            LOGGER.debug("{} accepted", task);
+            currentTaskRunner = new TaskRunner(this, task);
+            new Thread(currentTaskRunner).start();
+        } else {
+            currentTaskRunner = null;
         }
     }
 
@@ -307,32 +342,10 @@ public class Ci implements Runnable {
         return hazelcastInstance.getList("jobs");
     }
 
-    private void scanTasks() throws IOException {
-        try (Stream<Path> taskPathStream = list(tasksPath)) {
-            taskPathStream
-                    .filter(path -> !path.getFileName().toString().startsWith("temp"))
-                    .forEach(this::scanTask);
-        }
-    }
-
-    private void scanTask(Path taskPath) {
-        Map<String, Task> taskMap = taskMap();
-        String taskId = taskPath.getFileName().toString();
-        if (!taskMap.containsKey(taskId)) {
-            try {
-                Task task = Task.from(taskPath);
-                taskMap.put(taskId, task);
-                LOGGER.debug("Task <{}> added: {}", taskId, task);
-            } catch (IOException e) {
-                LOGGER.error("Failed to scan task: {}", taskPath, e);
-            }
-        };
-    }
-
     private void handleTasks() {
-        Map<String, Task> taskMap = taskMap();
+        Map<String, OldTask> taskMap = taskMap();
         for (String taskId : taskMap.keySet()) {
-            Task task = taskMap.get(taskId);
+            OldTask task = taskMap.get(taskId);
             if (task.isReady() &&  task.isTriggerExpired()) {
                 LOGGER.debug("Task <{}> is ready and trigger has expired: {}", taskId, task);
                 tryExecuteTask(taskMap, taskId, task);
@@ -341,7 +354,7 @@ public class Ci implements Runnable {
         }
     }
 
-    private void tryExecuteTask(Map<String, Task> taskMap, String taskId, Task task) {
+    private void tryExecuteTask(Map<String, OldTask> taskMap, String taskId, OldTask task) {
         Lock taskLock = hazelcastInstance.getLock(taskId);
         if (!taskLock.tryLock()) {
             return;
@@ -409,8 +422,8 @@ public class Ci implements Runnable {
     }
 
     public void stopTask(String taskId, Path taskPropertiesPath) throws IOException {
-        Map<String, Task> taskMap = taskMap();
-        Task task = taskMap.get(taskId);
+        Map<String, OldTask> taskMap = taskMap();
+        OldTask task = taskMap.get(taskId);
         if (exists(taskPropertiesPath)) {
             Properties taskProperties = new Properties();
             try (FileReader propertiesFile = new FileReader(taskPropertiesPath.toFile())) {
@@ -424,7 +437,7 @@ public class Ci implements Runnable {
         LOGGER.debug("Task <{}> stopped: {}", taskId, task);
     }
 
-    private Map<String, Task> taskMap() {
+    private Map<String, OldTask> taskMap() {
         return hazelcastInstance.getMap("tasks");
     }
 
@@ -435,10 +448,37 @@ public class Ci implements Runnable {
     }
 
     public void publishEvent(Event event) {
+        this.eventQueue.add(event);
         LOGGER.debug("{} published", event);
     }
 
     public Repositories repositories() {
         return data.repositories();
+    }
+
+    public Tasks tasks() {
+        return data.tasks();
+    }
+
+    public TaskStatuses taskStatuses() {
+        return data.taskStatuses();
+    }
+
+    public void addTaskToQueue(String name) {
+        data.taskQueue().add(name);
+    }
+
+    public void addTaskStatus(TaskRunner taskRunner, State state, String message, Exception exception) {
+        TaskStatus taskStatus = new TaskStatus(taskRunner.task.name, taskRunner.id, state, message, exception);
+        data.taskStatuses().taskStatus(taskStatus);
+    }
+
+    public void updateTaskStatus(TaskRunner taskRunner, State state, String message, Exception exception) {
+        TaskStatus taskStatus = data.taskStatuses().taskStatus(taskRunner);
+        data.taskStatuses().taskStatus(new TaskStatus(taskStatus, state, message, exception));
+    }
+
+    public Path workspace(String workspaceName) {
+        return workspacesPath.resolve(workspaceName);
     }
 }

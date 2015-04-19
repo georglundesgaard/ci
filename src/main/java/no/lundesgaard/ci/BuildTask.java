@@ -19,7 +19,7 @@ import java.util.UUID;
 import static java.lang.String.format;
 import static java.nio.file.Files.move;
 
-public class BuildTask extends Task {
+public class BuildTask extends OldTask {
 	private final static Logger LOGGER = LoggerFactory.getLogger(BuildTask.class);
 
 	private final String name;
@@ -36,7 +36,7 @@ public class BuildTask extends Task {
 		this.buildCommand = buildTaskProperties.getProperty("build-command");
 	}
 
-	public static Task from(Path buildTaskPath) throws IOException {
+	public static OldTask from(Path buildTaskPath) throws IOException {
 		Properties buildTaskProperties = new Properties();
 		try (FileReader buildTaskReader = new FileReader(buildTaskPath.toFile())) {
 			buildTaskProperties.load(buildTaskReader);

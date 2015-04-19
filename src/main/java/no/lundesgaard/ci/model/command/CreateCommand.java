@@ -1,14 +1,16 @@
-package no.lundesgaard.ci;
+package no.lundesgaard.ci.model.command;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Properties;
 
+import static no.lundesgaard.ci.model.command.CommandType.CREATE;
+
 public abstract class CreateCommand extends Command {
     @Override
-    public Type type() {
-        return Type.CREATE;
+    public CommandType type() {
+        return CREATE;
     }
 
     public static CreateCommand from(Path createCommandPath) throws IOException {
@@ -21,7 +23,7 @@ public abstract class CreateCommand extends Command {
             case "git-repo":
                 return new CreateGitRepoCommand(commandProperties);
             case "task":
-                return CreateTaskCommand.from(commandProperties);
+                return new CreateTaskCommand(commandProperties);
             default:
                 throw new IllegalArgumentException("invalid create command (type=" + type + ")");
         }

@@ -1,4 +1,4 @@
-package no.lundesgaard.ci.data;
+package no.lundesgaard.ci.model.repository;
 
 import no.lundesgaard.ci.Ci;
 

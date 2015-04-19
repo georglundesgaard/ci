@@ -1,15 +1,15 @@
-package no.lundesgaard.ci;
+package no.lundesgaard.ci.model.command;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Properties;
 
-import static no.lundesgaard.ci.Command.Type.LIST;
+import static no.lundesgaard.ci.model.command.CommandType.LIST;
 
 public abstract class ListCommand extends Command {
 	@Override
-	public Type type() {
+	public CommandType type() {
 		return LIST;
 	}
 
@@ -21,7 +21,11 @@ public abstract class ListCommand extends Command {
 		String type = commandProperties.getProperty("type", "unknown");
 		switch (type) {
 			case "git-repo":
-				return new ListGitRepoCommand();
+				return ListGitRepoCommand.INSTANCE;
+			case "task":
+				return ListTaskCommand.INSTANCE;
+			case "task-status":
+				return new ListTaskStatusCommand(commandProperties);
 			default:
 				throw new IllegalArgumentException("invalid create command (type=" + type + ")");
 		}

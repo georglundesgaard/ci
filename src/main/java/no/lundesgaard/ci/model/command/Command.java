@@ -1,10 +1,9 @@
-package no.lundesgaard.ci;
+package no.lundesgaard.ci.model.command;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import no.lundesgaard.ci.Ci;
+import no.lundesgaard.ci.ShutdownCommand;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
@@ -15,7 +14,7 @@ import static java.util.stream.Collectors.toList;
 
 public abstract class Command {
     public static Command from(Path commandPath) throws IOException {
-        Type type = Type.from(commandPath);
+        CommandType type = CommandType.from(commandPath);
         switch (type) {
             case SHUTDOWN:
                 return ShutdownCommand.INSTANCE;
@@ -23,6 +22,8 @@ public abstract class Command {
                 return CreateCommand.from(commandPath);
             case LIST:
                 return ListCommand.from(commandPath);
+            case SHOW:
+                return ShowCommand.from(commandPath);
             default:
                 throw new UnsupportedOperationException("Command type <" + type + "> not implemented");
         }
@@ -53,20 +54,6 @@ public abstract class Command {
 
     public abstract void validate();
 
-    public abstract Type type();
+    public abstract CommandType type();
 
-    public enum Type {
-        SHUTDOWN,
-        CREATE,
-        LIST;
-
-        public static Type from(Path commandPath) {
-            String command = commandPath.getFileName().toString().toUpperCase();
-            try {
-                return valueOf(command);
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Unknown command <" + command + ">");
-            }
-        }
-    }
 }
