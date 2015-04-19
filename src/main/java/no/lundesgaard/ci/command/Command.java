@@ -1,7 +1,10 @@
-package no.lundesgaard.ci.model.command;
+package no.lundesgaard.ci.command;
 
 import no.lundesgaard.ci.Ci;
-import no.lundesgaard.ci.ShutdownCommand;
+import no.lundesgaard.ci.command.create.CreateCommand;
+import no.lundesgaard.ci.command.list.ListCommand;
+import no.lundesgaard.ci.command.show.ShowCommand;
+import no.lundesgaard.ci.command.shutdown.ShutdownCommand;
 
 import java.io.IOException;
 import java.nio.file.Path;

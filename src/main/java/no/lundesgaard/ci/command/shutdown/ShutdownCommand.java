@@ -1,7 +1,8 @@
-package no.lundesgaard.ci;
+package no.lundesgaard.ci.command.shutdown;
 
-import no.lundesgaard.ci.model.command.Command;
-import no.lundesgaard.ci.model.command.CommandType;
+import no.lundesgaard.ci.Ci;
+import no.lundesgaard.ci.command.Command;
+import no.lundesgaard.ci.command.CommandType;
 
 public class ShutdownCommand extends Command {
     public static final ShutdownCommand INSTANCE = new ShutdownCommand();

@@ -3,15 +3,16 @@ package no.lundesgaard.ci;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import no.lundesgaard.ci.command.Command;
+import no.lundesgaard.ci.command.shutdown.ShutdownCommand;
+import no.lundesgaard.ci.event.Event;
 import no.lundesgaard.ci.model.TaskRunner;
 import no.lundesgaard.ci.model.Type;
-import no.lundesgaard.ci.model.command.Command;
 import no.lundesgaard.ci.model.data.Data;
-import no.lundesgaard.ci.model.repository.Repositories;
-import no.lundesgaard.ci.model.repository.Repository;
 import no.lundesgaard.ci.model.data.hazelcast.HazelcastData;
 import no.lundesgaard.ci.model.data.simple.SimpleData;
-import no.lundesgaard.ci.event.Event;
+import no.lundesgaard.ci.model.repository.Repositories;
+import no.lundesgaard.ci.model.repository.Repository;
 import no.lundesgaard.ci.model.task.Task;
 import no.lundesgaard.ci.model.task.TaskStatus;
 import no.lundesgaard.ci.model.task.TaskStatus.State;
@@ -28,28 +29,16 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 import java.util.Queue;
-import java.util.UUID;
-import java.util.concurrent.locks.Lock;
-import java.util.stream.Stream;
 
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.isDirectory;
-import static java.nio.file.Files.list;
 import static no.lundesgaard.ci.model.Type.HAZELCAST;
 import static no.lundesgaard.ci.model.Type.SIMPLE;
 
@@ -62,12 +51,10 @@ public class Ci implements Runnable {
     private final Path repositoriesPath;
     private final Path commandsPath;
     private final Path workspacesPath;
-    private final Path jobsPath;
     private final Type type;
     private String nodeId;
     private Data data;
     private HazelcastInstance hazelcastInstance;
-    private JobRunner currentJobRunner;
     private TaskRunner currentTaskRunner;
     private boolean started;
     private Queue<Event> eventQueue = new LinkedList<>();
@@ -153,7 +140,6 @@ public class Ci implements Runnable {
         this.repositoriesPath = rootPath.resolve("repositories");
         this.commandsPath = rootPath.resolve("commands");
         this.workspacesPath = rootPath.resolve("workspaces");
-        this.jobsPath = rootPath.resolve("jobs");
     }
 
     public String nodeId() {
@@ -176,10 +162,6 @@ public class Ci implements Runnable {
         return workspacesPath;
     }
 
-    public Path getJobsPath() {
-        return jobsPath;
-    }
-
     @Override
     public void run() {
         if (started) {
@@ -194,9 +176,6 @@ public class Ci implements Runnable {
                 scanRepositories();
                 processEventQueue();
                 runNextTask();
-                createNewJobs();
-                handleJobs();
-                handleTasks();
                 sleep(100);
             }
             LOGGER.debug("shutdown (safe) command accepted");
@@ -216,7 +195,7 @@ public class Ci implements Runnable {
         Config config = new Config();
         config.setProperty("hazelcast.logging.type", "slf4j");
         hazelcastInstance = Hazelcast.newHazelcastInstance(config);
-        createDirectoriesIfNotExists(repositoriesPath, commandsPath, workspacesPath, jobsPath);
+        createDirectoriesIfNotExists(repositoriesPath, commandsPath, workspacesPath);
         if (type == HAZELCAST) {
             this.nodeId = hazelcastInstance.getLocalEndpoint().getUuid();
             this.data = new HazelcastData(hazelcastInstance);
@@ -282,112 +261,6 @@ public class Ci implements Runnable {
         }
     }
 
-    private void createNewJobs() throws IOException {
-        try (Stream<Path> jobPathStream = list(jobsPath)) {
-            jobPathStream
-                    .filter(path -> path.toString().endsWith(".sh"))
-                    .forEach(path -> {
-                        File file = path.toFile();
-                        try {
-                            String script = readScriptFile(file);
-                            String name = file.getName();
-                            String taskId = name.substring(0, name.length() - 3);
-                            Job job;
-                            if (taskMap().containsKey(taskId)) {
-                                job = new Job(UUID.randomUUID().toString(), name, script, taskId);
-                            } else {
-                                job = new Job(UUID.randomUUID().toString(), name, script);
-                            }
-                            jobList().add(job);
-                            LOGGER.debug("{} added", job);
-                        } catch (IOException e) {
-                            LOGGER.error("Failed to read script file: {}", file, e);
-                        } finally {
-                            deleteFile(file);
-                        }
-                    });
-        }
-    }
-
-    private void handleJobs() {
-        if (currentJobRunner != null && currentJobRunner.isRunning()) {
-            return;
-        }
-        Job job = nextJob();
-        if (job != null) {
-            LOGGER.debug("{} accepted", job);
-            currentJobRunner = new JobRunner(this, job);
-            new Thread(currentJobRunner).start();
-        } else {
-            currentJobRunner = null;
-        }
-    }
-
-    private Job nextJob() {
-        Lock jobsLock = hazelcastInstance.getLock("jobsLock");
-        jobsLock.lock();
-        try {
-            List<Job> jobList = jobList();
-            if (jobList.isEmpty()) {
-                return null;
-            }
-            LOGGER.debug("jobs: {}", jobList.size());
-            return jobList.remove(0);
-        } finally {
-            jobsLock.unlock();
-        }
-    }
-
-    private List<Job> jobList() {
-        return hazelcastInstance.getList("jobs");
-    }
-
-    private void handleTasks() {
-        Map<String, OldTask> taskMap = taskMap();
-        for (String taskId : taskMap.keySet()) {
-            OldTask task = taskMap.get(taskId);
-            if (task.isReady() &&  task.isTriggerExpired()) {
-                LOGGER.debug("Task <{}> is ready and trigger has expired: {}", taskId, task);
-                tryExecuteTask(taskMap, taskId, task);
-                return;
-            }
-        }
-    }
-
-    private void tryExecuteTask(Map<String, OldTask> taskMap, String taskId, OldTask task) {
-        Lock taskLock = hazelcastInstance.getLock(taskId);
-        if (!taskLock.tryLock()) {
-            return;
-        }
-        try {
-            task.execute(this, taskId);
-            taskMap.put(taskId, task);
-            LOGGER.debug("Task <{}> executed: {}", taskId, task);
-        } finally {
-            taskLock.unlock();
-        }
-    }
-
-    private void deleteFile(File file) {
-        try {
-            Files.delete(file.toPath());
-        } catch (IOException e) {
-            LOGGER.warn("Failed to delete file: {}", file, e);
-        }
-    }
-
-    private String readScriptFile(File file) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(file));
-        StringWriter stringWriter = new StringWriter();
-        PrintWriter writer = new PrintWriter(stringWriter);
-        String line;
-        while ((line = reader.readLine()) != null) {
-            writer.println(line);
-        }
-        reader.close();
-        return stringWriter.toString();
-    }
-
     private Command nextCommand() throws IOException {
         try {
             return Command.nextFrom(commandsPath);
@@ -399,14 +272,14 @@ public class Ci implements Runnable {
 
     private void shutdown() throws IOException {
         LOGGER.debug("CI-server shutting down...");
-        if (currentJobRunner != null) {
-            LOGGER.debug("waiting for current job to finish");
+        if (currentTaskRunner != null) {
+            LOGGER.debug("waiting for current task to finish");
             do {
                 sleep(100);
-            } while (currentJobRunner.isRunning() && (nextCommand()) != ShutdownCommand.INSTANCE);
-            if (currentJobRunner.isRunning()) {
+            } while (currentTaskRunner.isRunning() && (nextCommand()) != ShutdownCommand.INSTANCE);
+            if (currentTaskRunner.isRunning()) {
                 LOGGER.debug("shutdown (forced) command accepted");
-                currentJobRunner.stop();
+                currentTaskRunner.stop();
             }
         }
         hazelcastInstance.shutdown();
@@ -419,26 +292,6 @@ public class Ci implements Runnable {
         } catch (InterruptedException e) {
             LOGGER.warn("Sleep interrupted", e);
         }
-    }
-
-    public void stopTask(String taskId, Path taskPropertiesPath) throws IOException {
-        Map<String, OldTask> taskMap = taskMap();
-        OldTask task = taskMap.get(taskId);
-        if (exists(taskPropertiesPath)) {
-            Properties taskProperties = new Properties();
-            try (FileReader propertiesFile = new FileReader(taskPropertiesPath.toFile())) {
-                taskProperties.load(propertiesFile);
-            }
-            task.stop(taskProperties);
-        } else {
-            task.stop();
-        }
-        taskMap.put(taskId, task);
-        LOGGER.debug("Task <{}> stopped: {}", taskId, task);
-    }
-
-    private Map<String, OldTask> taskMap() {
-        return hazelcastInstance.getMap("tasks");
     }
 
     public Path createRepositoryDirectoryIfNotExists(Repository repository) {

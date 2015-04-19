@@ -1,4 +1,4 @@
-package no.lundesgaard.ci.model.command;
+package no.lundesgaard.ci.command;
 
 import java.nio.file.Path;
 

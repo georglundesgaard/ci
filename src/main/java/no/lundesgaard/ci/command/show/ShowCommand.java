@@ -1,11 +1,14 @@
-package no.lundesgaard.ci.model.command;
+package no.lundesgaard.ci.command.show;
+
+import no.lundesgaard.ci.command.Command;
+import no.lundesgaard.ci.command.CommandType;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Properties;
 
-import static no.lundesgaard.ci.model.command.CommandType.SHOW;
+import static no.lundesgaard.ci.command.CommandType.SHOW;
 
 public abstract class ShowCommand extends Command {
 	@Override
