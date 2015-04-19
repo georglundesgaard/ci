@@ -6,7 +6,6 @@ import com.hazelcast.core.HazelcastInstance;
 import no.lundesgaard.ci.command.Command;
 import no.lundesgaard.ci.command.shutdown.ShutdownCommand;
 import no.lundesgaard.ci.event.Event;
-import no.lundesgaard.ci.model.TaskRunner;
 import no.lundesgaard.ci.model.Type;
 import no.lundesgaard.ci.model.data.Data;
 import no.lundesgaard.ci.model.data.hazelcast.HazelcastData;
@@ -54,9 +53,7 @@ public class Ci implements Runnable {
     private final Type type;
     private String nodeId;
     private Data data;
-    private HazelcastInstance hazelcastInstance;
     private TaskRunner currentTaskRunner;
-    private boolean started;
     private Queue<Event> eventQueue = new LinkedList<>();
 
     public static void main(String... args) throws Exception {
@@ -164,7 +161,7 @@ public class Ci implements Runnable {
 
     @Override
     public void run() {
-        if (started) {
+        if (isRunning()) {
             LOGGER.error("CI-server already started!");
             return;
         }
@@ -190,21 +187,24 @@ public class Ci implements Runnable {
         }
     }
 
+    private boolean isRunning() {
+        return nodeId != null;
+    }
+
     private void initServer() {
         LOGGER.debug("CI-server starting...");
-        Config config = new Config();
-        config.setProperty("hazelcast.logging.type", "slf4j");
-        hazelcastInstance = Hazelcast.newHazelcastInstance(config);
         createDirectoriesIfNotExists(repositoriesPath, commandsPath, workspacesPath);
         if (type == HAZELCAST) {
-            this.nodeId = hazelcastInstance.getLocalEndpoint().getUuid();
+            Config config = new Config();
+            config.setProperty("hazelcast.logging.type", "slf4j");
+            HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(config);
             this.data = new HazelcastData(hazelcastInstance);
+            this.nodeId = hazelcastInstance.getLocalEndpoint().getUuid();
         } else {
-            this.nodeId = "simple";
             this.data = new SimpleData();
+            this.nodeId = "simple";
         }
         LOGGER.debug("CI-server started");
-        started = true;
     }
 
     private void createDirectoriesIfNotExists(Path... directoryPaths) {
@@ -255,7 +255,7 @@ public class Ci implements Runnable {
             Task task = data.tasks().task(taskName);
             LOGGER.debug("{} accepted", task);
             currentTaskRunner = new TaskRunner(this, task);
-            new Thread(currentTaskRunner).start();
+            new Thread(currentTaskRunner, "taskRunner").start();
         } else {
             currentTaskRunner = null;
         }
@@ -282,7 +282,11 @@ public class Ci implements Runnable {
                 currentTaskRunner.stop();
             }
         }
-        hazelcastInstance.shutdown();
+        try {
+            this.data.shutdown();
+        } finally {
+            this.nodeId = null;
+        }
         LOGGER.debug("CI-server shutdown completed!");
     }
 

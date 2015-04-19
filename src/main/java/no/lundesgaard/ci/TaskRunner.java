@@ -1,6 +1,5 @@
-package no.lundesgaard.ci.model;
+package no.lundesgaard.ci;
 
-import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.task.Task;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;

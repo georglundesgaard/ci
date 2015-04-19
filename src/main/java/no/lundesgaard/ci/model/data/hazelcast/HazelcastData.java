@@ -36,18 +36,19 @@ public class HazelcastData implements Data {
 
 	@Override
 	public TaskStatuses taskStatuses() {
-		return new TaskStatuses(taskStatusesMap(hazelcastInstance.getMultiMap("taskStatusesMap")));
+		return new TaskStatuses(new HazelcastTaskStatusesMap(hazelcastInstance));
 	}
 
-	private static TaskStatusesMap taskStatusesMap(MultiMap<String, TaskStatus> taskStatusesMap) {
-		return new HazelcastTaskStatusesMap(taskStatusesMap);
+	@Override
+	public void shutdown() {
+		hazelcastInstance.shutdown();
 	}
 
 	private static class HazelcastTaskStatusesMap implements TaskStatusesMap {
 		private MultiMap<String, TaskStatus> taskStatusesMap;
 
-		public HazelcastTaskStatusesMap(MultiMap<String, TaskStatus> taskStatusesMap) {
-			this.taskStatusesMap = taskStatusesMap;
+		public HazelcastTaskStatusesMap(HazelcastInstance hazelcastInstance) {
+			this.taskStatusesMap = hazelcastInstance.getMultiMap("taskStatusesMap");
 		}
 
 		@Override

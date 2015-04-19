@@ -1,6 +1,6 @@
 package no.lundesgaard.ci.model.task;
 
-import no.lundesgaard.ci.model.TaskRunner;
+import no.lundesgaard.ci.TaskRunner;
 
 import java.util.Collection;
 

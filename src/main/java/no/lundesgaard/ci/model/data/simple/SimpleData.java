@@ -48,6 +48,11 @@ public class SimpleData implements Data {
 		return taskStatuses;
 	}
 
+	@Override
+	public void shutdown() {
+		// do nothing
+	}
+
 	private static class SimpleTaskStatusesMap implements TaskStatusesMap {
 		private Map<String, Set<TaskStatus>> taskStatusesMap = new HashMap<>();
 

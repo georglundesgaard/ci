@@ -10,4 +10,5 @@ public interface Data {
 	Tasks tasks();
 	TaskQueue taskQueue();
 	TaskStatuses taskStatuses();
+	void shutdown();
 }

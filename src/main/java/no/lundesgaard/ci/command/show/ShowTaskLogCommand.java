@@ -1,7 +1,7 @@
 package no.lundesgaard.ci.command.show;
 
 import no.lundesgaard.ci.Ci;
-import no.lundesgaard.ci.model.TaskRunner;
+import no.lundesgaard.ci.TaskRunner;
 import no.lundesgaard.ci.model.task.TaskStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
