@@ -55,9 +55,18 @@ public class Job {
 				this.started = oldJob.started;
 				this.stopped = now();
 				break;
+			case WAITING:
+				this.started = null;
+				this.stopped = null;
+				break;
 			default:
 				throw new IllegalStateException(format("unexpected new state: %s", state));
 		}
+	}
+
+	public Job queue() {
+		verifyState(CREATED);
+		return new Job(this, WAITING, null);
 	}
 
 	public Process start(Ci ci) {

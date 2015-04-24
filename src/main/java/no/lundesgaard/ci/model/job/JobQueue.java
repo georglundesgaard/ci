@@ -11,7 +11,7 @@ public class JobQueue {
 	}
 
 	public void add(Job job) {
-		this.queue.add(job);
+		this.queue.add(job.queue());
 	}
 
 	public Job next() {
