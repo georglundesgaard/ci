@@ -5,6 +5,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -62,9 +63,13 @@ public abstract class Repository implements Serializable {
 				.toString();
 	}
 
-	public void copyToWorkspace(Ci ci, Path workspacePath) throws IOException {
-		Path repositoryPath = ci.getRepositoriesPath().resolve(name);
-		walkFileTree(repositoryPath, copyFileVisitor(repositoryPath, workspacePath));
+	public void copyToWorkspace(Ci ci, Path workspacePath) {
+		Path repositoryPath = ci.repositoriesPath.resolve(name);
+		try {
+			walkFileTree(repositoryPath, copyFileVisitor(repositoryPath, workspacePath));
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 	private FileVisitor<Path> copyFileVisitor(Path source, Path target) {

@@ -39,9 +39,9 @@ public class GitRepository extends Repository {
 	@Override
 	public Repository scan(Ci ci) {
 		try {
-			Path repositoriesPath = ci.getRepositoriesPath();
-			Path repositoryPath = ci.createRepositoryDirectoryIfNotExists(this);
-			File outputLog = repositoriesPath.resolve(name + ".log").toFile();
+			Path repositoryPath = ci.repositoriesPath.resolve(this.name);
+			ci.createDirectoryIfNotExists(repositoryPath);
+			File outputLog = ci.repositoriesPath.resolve(name + ".log").toFile();
 			if (isEmpty(repositoryPath)) {
 				cloneRepository(repositoryPath, outputLog);
 			} else {
@@ -49,7 +49,7 @@ public class GitRepository extends Repository {
 			}
 			String lastCommitId = findLastCommitId(repositoryPath);
 			if (!lastCommitId.equals(this.lastCommitId)) {
-				ci.publishEvent(new RepositoryUpdatedEvent(this.name));
+				ci.eventQueue.add(new RepositoryUpdatedEvent(this.name, lastCommitId));
 				return new GitRepository(this, now(), null, lastCommitId);
 			}
 			return new GitRepository(this, now());

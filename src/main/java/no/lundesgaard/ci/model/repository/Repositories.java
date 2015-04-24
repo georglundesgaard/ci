@@ -28,12 +28,13 @@ public final class Repositories {
 		return repositoryMap.values().stream();
 	}
 
-	public void scan(Ci ci) {
+	public int scan(Ci ci) {
 		List<Repository> scannedRepositories = stream()
 				.filter(repository -> repository.nodeId.equals(ci.nodeId()) && repository.readyForScan())
 				.map(repository -> repository.scan(ci))
 				.collect(toList());
 		scannedRepositories.forEach(this::repository);
+		return scannedRepositories.size();
 	}
 
 	public int count() {

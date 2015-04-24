@@ -2,7 +2,6 @@ package no.lundesgaard.ci.model.workspace;
 
 import no.lundesgaard.ci.Ci;
 
-import java.io.IOException;
 import java.nio.file.Path;
 
 public class PreviousTasksWorkspace implements Workspace {
@@ -12,7 +11,7 @@ public class PreviousTasksWorkspace implements Workspace {
 	}
 
 	@Override
-	public Path init(Ci ci, Path workspacePath) throws IOException {
+	public Path init(Ci ci, String workspaceName) {
 		// TODO
 		return null;
 	}

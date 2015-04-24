@@ -12,12 +12,12 @@ public class ShutdownCommand extends Command {
 
     @Override
     public void execute(Ci ci) {
-        throw new UnsupportedOperationException("shutdown command is not executable");
+        ci.shutdown();
     }
 
     @Override
     public void validate() {
-        throw new UnsupportedOperationException("shutdown command is not executable");
+        // do nothing
     }
 
     @Override

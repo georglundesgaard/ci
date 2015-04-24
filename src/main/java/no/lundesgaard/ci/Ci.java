@@ -3,28 +3,19 @@ package no.lundesgaard.ci;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import no.lundesgaard.ci.command.Command;
-import no.lundesgaard.ci.command.shutdown.ShutdownCommand;
-import no.lundesgaard.ci.event.Event;
+import no.lundesgaard.ci.event.EventQueue;
 import no.lundesgaard.ci.model.Type;
 import no.lundesgaard.ci.model.data.Data;
 import no.lundesgaard.ci.model.data.hazelcast.HazelcastData;
 import no.lundesgaard.ci.model.data.simple.SimpleData;
+import no.lundesgaard.ci.model.job.JobQueue;
+import no.lundesgaard.ci.model.job.Jobs;
 import no.lundesgaard.ci.model.repository.Repositories;
-import no.lundesgaard.ci.model.repository.Repository;
-import no.lundesgaard.ci.model.task.Task;
-import no.lundesgaard.ci.model.task.TaskStatus;
-import no.lundesgaard.ci.model.task.TaskStatus.State;
-import no.lundesgaard.ci.model.task.TaskStatuses;
 import no.lundesgaard.ci.model.task.Tasks;
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.MissingOptionException;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import no.lundesgaard.ci.processor.CommandProcessor;
+import no.lundesgaard.ci.processor.EventProcessor;
+import no.lundesgaard.ci.processor.JobProcessor;
+import no.lundesgaard.ci.processor.RepositoryProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,106 +24,44 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.isDirectory;
 import static no.lundesgaard.ci.model.Type.HAZELCAST;
-import static no.lundesgaard.ci.model.Type.SIMPLE;
+import static org.apache.commons.lang3.StringUtils.uncapitalize;
 
-public class Ci implements Runnable {
+public class Ci {
     private static final Logger LOGGER = LoggerFactory.getLogger(Ci.class);
-    private static final String ROOT = "root";
-    private static final String TYPE = "type";
-    private static final String HELP = "help";
 
-    private final Path repositoriesPath;
-    private final Path commandsPath;
-    private final Path workspacesPath;
+    public final Path repositoriesPath;
+    public final Path commandsPath;
+    public final Path workspacesPath;
     private final Type type;
     private String nodeId;
     private Data data;
-    private TaskRunner currentTaskRunner;
-    private Queue<Event> eventQueue = new LinkedList<>();
+    public final EventQueue eventQueue = new EventQueue();
+    private CommandProcessor commandProcessor;
+    private JobProcessor jobProcessor;
+    private RepositoryProcessor repositoryProcessor;
+    private EventProcessor eventProcessor;
 
-    public static void main(String... args) throws Exception {
-        Options options = options();
-        CommandLine commandLine = commandLine(options, args);
-        if (commandLine == null) {
-            return;
-        }
-        if (commandLine.hasOption(HELP)) {
-            printHelp(options);
-            return;
-        }
-        Type type = type(commandLine);
-        String root = root(commandLine);
-        new Ci(type, root).run();
-    }
-
-    private static Options options() {
-        Options options = new Options();
-        options.addOption(rootOption());
-        options.addOption(typeOption());
-        options.addOption(helpOption());
-        return options;
-    }
-
-    private static Option rootOption() {
-        Option rootOption = new Option("r", ROOT, true, "Root folder");
-        rootOption.setRequired(true);
-        return rootOption;
-    }
-
-    private static Option typeOption() {
-        return new Option("t", TYPE, true, "Type: simple or hazelcast");
-    }
-
-    private static Option helpOption() {
-        return new Option("h", HELP, false, "Print this message");
-    }
-
-    private static CommandLine commandLine(Options options, String[] args) throws ParseException {
-        CommandLineParser commandLineParser = new BasicParser();
-        try {
-            return commandLineParser.parse(options, args);
-        } catch (MissingOptionException e) {
-            printHelp(options);
-            return null;
-        }
-    }
-
-    private static void printHelp(Options options) {
-        HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter.printHelp("ci", options, true);
-    }
-
-    private static Type type(CommandLine commandLine) {
-        Type type;
-        if (commandLine.hasOption(TYPE)) {
-            type = Type.valueOf(commandLine.getOptionValue(TYPE).toUpperCase());
+    public static void main(String[] args) throws Exception {
+        CiOptions ciOptions = new CiOptions(args);
+        if (ciOptions.isValid()) {
+            new Ci(ciOptions).start();
         } else {
-            type = SIMPLE;
+            ciOptions.printHelp();
         }
-        LOGGER.debug("type: {}", type);
-        return type;
     }
 
-    private static String root(CommandLine commandLine) {
-        String root = commandLine.getOptionValue(ROOT);
-        LOGGER.debug("root: {}", root);
-        return root;
-    }
-
-    public Ci(Type type, String root) throws IOException {
-        this.type = type;
-        Path rootPath = Paths.get(root);
+    public Ci(CiOptions ciOptions) throws IOException {
+        this.type = ciOptions.type;
+        Path rootPath = Paths.get(ciOptions.root);
         if (!exists(rootPath)) {
             Files.createDirectories(rootPath);
         }
         if (!isDirectory(rootPath)) {
-            throw new IllegalArgumentException("CI root <" + root + "> is not a directory");
+            throw new IllegalArgumentException("CI root <" + ciOptions.root + "> is not a directory");
         }
         this.repositoriesPath = rootPath.resolve("repositories");
         this.commandsPath = rootPath.resolve("commands");
@@ -143,57 +72,58 @@ public class Ci implements Runnable {
         return nodeId;
     }
 
-    public Repository addRepository(Repository repository) {
-        return data.repositories().repository(repository);
+    public Repositories repositories() {
+        return data.repositories();
     }
 
-    public Task addTask(Task task) {
-        return data.tasks().task(task);
+    public Tasks tasks() {
+        return data.tasks();
     }
 
-    public Path getRepositoriesPath() {
-        return repositoriesPath;
+    public Jobs jobs() {
+        return data.jobs();
     }
 
-    public Path getWorkspacesPath() {
-        return workspacesPath;
+    public JobQueue jobQueue() {
+        return data.jobQueue();
     }
 
-    @Override
-    public void run() {
+    public void start() {
         if (isRunning()) {
-            LOGGER.error("CI-server already started!");
+            LOGGER.error("CI-server already running");
             return;
         }
-        try {
-            initServer();
-            Command command;
-            while ((command = nextCommand()) != ShutdownCommand.INSTANCE) {
-                processCommand(command);
-                scanRepositories();
-                processEventQueue();
-                runNextTask();
-                sleep(100);
-            }
-            LOGGER.debug("shutdown (safe) command accepted");
-        } catch (IOException | UncheckedIOException e) {
-            LOGGER.error("I/O error: {}", e.getMessage(), e);
-        } finally {
-            try {
-                shutdown();
-            } catch (IOException e) {
-                LOGGER.error("I/O error: {}", e.getMessage(), e);
-            }
-        }
+        LOGGER.debug("CI-server starting...");
+        createDirectoriesIfNotExists();
+        initData();
+        startCommandProcessor();
+        startJobProcessor();
+        startRepositoryProcessor();
+        startEventProcessor();
+        LOGGER.debug("CI-server started");
     }
 
     private boolean isRunning() {
         return nodeId != null;
     }
 
-    private void initServer() {
-        LOGGER.debug("CI-server starting...");
-        createDirectoriesIfNotExists(repositoriesPath, commandsPath, workspacesPath);
+    private void createDirectoriesIfNotExists() {
+        createDirectoryIfNotExists(repositoriesPath);
+        createDirectoryIfNotExists(commandsPath);
+        createDirectoryIfNotExists(workspacesPath);
+    }
+
+    public void createDirectoryIfNotExists(Path directoryPath) {
+        if (!exists(directoryPath)) {
+            try {
+                Files.createDirectory(directoryPath);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    private void initData() {
         if (type == HAZELCAST) {
             Config config = new Config();
             config.setProperty("hazelcast.logging.type", "slf4j");
@@ -204,138 +134,84 @@ public class Ci implements Runnable {
             this.data = new SimpleData();
             this.nodeId = "simple";
         }
-        LOGGER.debug("CI-server started");
     }
 
-    private void createDirectoriesIfNotExists(Path... directoryPaths) {
-        for (Path path : directoryPaths) {
-            createDirectoryIfNotExitst(path);
-        }
+    private void startCommandProcessor() {
+        this.commandProcessor = new CommandProcessor(this);
+        startNewThread(commandProcessor);
     }
 
-    private void createDirectoryIfNotExitst(Path directoryPath) {
-        if (!exists(directoryPath)) {
+    private void startJobProcessor() {
+        this.jobProcessor = new JobProcessor(this);
+        startNewThread(jobProcessor);
+    }
+
+    private void startRepositoryProcessor() {
+        this.repositoryProcessor = new RepositoryProcessor(this);
+        startNewThread(repositoryProcessor);
+    }
+
+    private void startEventProcessor() {
+        this.eventProcessor = new EventProcessor(this);
+        startNewThread(eventProcessor);
+    }
+
+    private void startNewThread(Runnable target) {
+        String name = uncapitalize(target.getClass().getSimpleName());
+        startNewThread(target, name);
+    }
+
+    private void startNewThread(Runnable target, String name) {
+        new Thread(target, name).start();
+    }
+
+    public void shutdown() {
+        startNewThread(() -> {
+            LOGGER.debug("CI-server shutting down...");
             try {
-                Files.createDirectory(directoryPath);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                stopProcessors();
+                do {
+                    sleep();
+                } while (processorsIsNotStopped());
+            } finally {
+                try {
+                    this.data.shutdown();
+                } finally {
+                    this.nodeId = null;
+                }
             }
-        }
+            LOGGER.debug("CI-server shutdown completed!");
+        }, "shutdown");
     }
 
-    private void processCommand(Command command) {
-        if (command == null) {
-            return;
-        }
+    private void stopProcessors() {
+        commandProcessor.stop();
+        jobProcessor.stop();
+        repositoryProcessor.stop();
+        eventProcessor.stop();
+    }
+
+    private void sleep() {
         try {
-            command.validate();
-            command.execute(this);
-        } catch (IllegalStateException e) {
-            LOGGER.error("Invalid command: {}", command.type(), e);
-        }
-    }
-
-    private void scanRepositories() {
-        data.repositories().scan(this);
-    }
-
-    private void processEventQueue() {
-        while (!eventQueue.isEmpty()) {
-            eventQueue.remove().process(this);
-        }
-    }
-
-    private void runNextTask() {
-        if (currentTaskRunner != null && currentTaskRunner.isRunning()) {
-            // a task is already running
-            return;
-        }
-        String taskName = data.taskQueue().next();
-        if (taskName != null) {
-            Task task = data.tasks().task(taskName);
-            LOGGER.debug("{} accepted", task);
-            currentTaskRunner = new TaskRunner(this, task);
-            new Thread(currentTaskRunner, "taskRunner").start();
-        } else {
-            currentTaskRunner = null;
-        }
-    }
-
-    private Command nextCommand() throws IOException {
-        try {
-            return Command.nextFrom(commandsPath);
-        } catch (RuntimeException e) {
-            LOGGER.error("Failed to resolve next command: {}", e.getMessage(), e);
-            return null;
-        }
-    }
-
-    private void shutdown() throws IOException {
-        LOGGER.debug("CI-server shutting down...");
-        if (currentTaskRunner != null) {
-            LOGGER.debug("waiting for current task to finish");
-            do {
-                sleep(100);
-            } while (currentTaskRunner.isRunning() && (nextCommand()) != ShutdownCommand.INSTANCE);
-            if (currentTaskRunner.isRunning()) {
-                LOGGER.debug("shutdown (forced) command accepted");
-                currentTaskRunner.stop();
-            }
-        }
-        try {
-            this.data.shutdown();
-        } finally {
-            this.nodeId = null;
-        }
-        LOGGER.debug("CI-server shutdown completed!");
-    }
-
-    private void sleep(int millis) {
-        try {
-            Thread.sleep(millis);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             LOGGER.warn("Sleep interrupted", e);
         }
     }
 
-    public Path createRepositoryDirectoryIfNotExists(Repository repository) {
-        Path repositoryDirectory = repositoriesPath.resolve(repository.name);
-        createDirectoryIfNotExitst(repositoryDirectory);
-        return repositoryDirectory;
+    private boolean processorsIsNotStopped() {
+        return !commandProcessor.isStopped()
+                || !jobProcessor.isStopped()
+                || !repositoryProcessor.isStopped()
+                || !eventProcessor.isStopped();
     }
 
-    public void publishEvent(Event event) {
-        this.eventQueue.add(event);
-        LOGGER.debug("{} published", event);
-    }
+    public int nextJobNumberFor(String taskName) {
+        return jobs()
+                .stream()
+                .filter(job -> job.taskName.equals(taskName))
+                .mapToInt(job -> job.jobNumber)
+                .max().orElse(0) + 1;
 
-    public Repositories repositories() {
-        return data.repositories();
-    }
-
-    public Tasks tasks() {
-        return data.tasks();
-    }
-
-    public TaskStatuses taskStatuses() {
-        return data.taskStatuses();
-    }
-
-    public void addTaskToQueue(String name) {
-        data.taskQueue().add(name);
-    }
-
-    public void addTaskStatus(TaskRunner taskRunner, State state, String message, Exception exception) {
-        TaskStatus taskStatus = new TaskStatus(taskRunner.task.name, taskRunner.id, state, message, exception);
-        data.taskStatuses().taskStatus(taskStatus);
-    }
-
-    public void updateTaskStatus(TaskRunner taskRunner, State state, String message, Exception exception) {
-        TaskStatus taskStatus = data.taskStatuses().taskStatus(taskRunner);
-        data.taskStatuses().taskStatus(new TaskStatus(taskStatus, state, message, exception));
-    }
-
-    public Path workspace(String workspaceName) {
-        return workspacesPath.resolve(workspaceName);
     }
 }

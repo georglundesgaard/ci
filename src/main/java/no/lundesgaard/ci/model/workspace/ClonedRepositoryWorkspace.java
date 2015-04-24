@@ -4,22 +4,21 @@ import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.repository.Repository;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import java.io.IOException;
 import java.nio.file.Path;
 
-import static java.nio.file.Files.createDirectory;
 import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public class ClonedRepositoryWorkspace implements Workspace {
-	public final String repository;
+	public final String repositoryName;
 
-	public ClonedRepositoryWorkspace(String repository) {
-		this.repository = repository;
+	public ClonedRepositoryWorkspace(String repositoryName) {
+		this.repositoryName = repositoryName;
 	}
 
 	@Override
-	public Path init(Ci ci, Path workspacePath) throws IOException {
-		Repository repository = ci.repositories().repository(this.repository);
+	public Path init(Ci ci, String workspaceName) {
+		Repository repository = ci.repositories().repository(this.repositoryName);
+		Path workspacePath = ci.workspacesPath.resolve(workspaceName);
 		repository.copyToWorkspace(ci, workspacePath);
 		return workspacePath;
 	}
@@ -27,7 +26,7 @@ public class ClonedRepositoryWorkspace implements Workspace {
 	@Override
 	public String toString() {
 		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
-				.append("repository", repository)
+				.append("repositoryName", repositoryName)
 				.toString();
 	}
 }

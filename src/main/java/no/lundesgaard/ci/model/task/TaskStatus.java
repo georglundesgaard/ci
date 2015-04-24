@@ -6,6 +6,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
@@ -16,6 +18,7 @@ public class TaskStatus implements Serializable {
 	public final State state;
 	public final String message;
 	public final Exception exception;
+	private final Map<String, String> properties = new HashMap<>();
 
 	public TaskStatus(String taskName, String taskRunnerId, State state, String message, Exception exception) {
 		this.taskName = taskName;

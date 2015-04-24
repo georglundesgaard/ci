@@ -1,7 +1,5 @@
 package no.lundesgaard.ci.model.task;
 
-import no.lundesgaard.ci.model.repository.Repository;
-
 import java.util.Map;
 import java.util.stream.Stream;
 

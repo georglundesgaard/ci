@@ -1,20 +1,22 @@
 package no.lundesgaard.ci.model.task;
 
+import no.lundesgaard.ci.task.TaskQueueItem;
+
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
 public class TaskQueue {
-	private final Queue<String> queue;
+	private final Queue<TaskQueueItem> queue;
 
-	public TaskQueue(Queue<String> queue) {
+	public TaskQueue(Queue<TaskQueueItem> queue) {
 		this.queue = queue;
 	}
 
-	public void add(String name) {
-		this.queue.add(name);
+	public void add(TaskQueueItem item) {
+		this.queue.add(item);
 	}
 
-	public String next() {
+	public TaskQueueItem next() {
 		try {
 			return this.queue.remove();
 		} catch (NoSuchElementException e) {

@@ -6,7 +6,7 @@ import static ch.qos.logback.classic.Level.WARN
 
 appender("STDOUT", ConsoleAppender) {
     encoder(PatternLayoutEncoder) {
-        pattern = "%d{HH:mm:ss.SSS} [%-10thread{10}] %-5level %-36logger{36} - %msg%n"
+        pattern = "%d{HH:mm:ss.SSS} [%-20thread] %-5level %-30logger{30} - %msg%n"
     }
 }
 logger("com.hazelcast", WARN)

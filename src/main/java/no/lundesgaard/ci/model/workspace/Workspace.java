@@ -7,5 +7,5 @@ import java.io.Serializable;
 import java.nio.file.Path;
 
 public interface Workspace extends Serializable {
-	Path init(Ci ci, Path workspacePath) throws IOException;
+	Path init(Ci ci, String workspaceName);
 }

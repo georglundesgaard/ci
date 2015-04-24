@@ -54,7 +54,7 @@ public class CreateTaskCommand extends CreateCommand {
 	@Override
 	public void execute(Ci ci) {
 		Task task = new Task(name, trigger, workspace, script);
-		ci.addTask(task);
+		ci.tasks().task(task);
 	}
 
 	@Override
@@ -73,7 +73,7 @@ public class CreateTaskCommand extends CreateCommand {
 
 	private void validateTrigger() {
 		if (trigger instanceof RepositoryUpdatedTrigger
-				&& ((RepositoryUpdatedTrigger) trigger).repository == null) {
+				&& ((RepositoryUpdatedTrigger) trigger).repositoryName == null) {
 			throw new IllegalStateException("missing repository name on trigger");
 		}
 		if (trigger instanceof TasksCompletedSuccessfullyTrigger
@@ -84,7 +84,7 @@ public class CreateTaskCommand extends CreateCommand {
 
 	private void validateWorkspace() {
 		if (workspace instanceof ClonedRepositoryWorkspace
-				&& ((ClonedRepositoryWorkspace) workspace).repository == null) {
+				&& ((ClonedRepositoryWorkspace) workspace).repositoryName == null) {
 			throw new IllegalStateException("missing repository name on workspace");
 		}
 	}

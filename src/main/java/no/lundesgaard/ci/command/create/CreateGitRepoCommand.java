@@ -18,7 +18,7 @@ public class CreateGitRepoCommand extends CreateCommand {
 	@Override
 	public void execute(Ci ci) {
 		Repository repository = new GitRepository(name, url, ci.nodeId());
-		ci.addRepository(repository);
+		ci.repositories().repository(repository);
 	}
 
 	@Override

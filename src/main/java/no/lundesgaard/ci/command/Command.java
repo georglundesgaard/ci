@@ -7,6 +7,7 @@ import no.lundesgaard.ci.command.show.ShowCommand;
 import no.lundesgaard.ci.command.shutdown.ShutdownCommand;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
@@ -32,19 +33,23 @@ public abstract class Command {
         }
     }
 
-    public static Command nextFrom(Path commandsPath) throws IOException {
-        List<Path> commandPaths = listCommands(commandsPath);
-        for (Path commandPath : commandPaths) {
-            try {
-                Command command = from(commandPath);
-                if (command != null) {
-                    return command;
+    public static Command nextFrom(Path commandsPath) {
+        try {
+            List<Path> commandPaths = listCommands(commandsPath);
+            for (Path commandPath : commandPaths) {
+                try {
+                    Command command = from(commandPath);
+                    if (command != null) {
+                        return command;
+                    }
+                } finally {
+                    delete(commandPath);
                 }
-            } finally {
-                delete(commandPath);
             }
+            return null;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-        return null;
     }
 
     private static List<Path> listCommands(Path commandsPath) throws IOException {
