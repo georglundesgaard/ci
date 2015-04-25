@@ -1,6 +1,7 @@
 package no.lundesgaard.ci.model.task;
 
 import no.lundesgaard.ci.Ci;
+import no.lundesgaard.ci.model.job.Job;
 import no.lundesgaard.ci.model.trigger.Trigger;
 import no.lundesgaard.ci.model.workspace.Workspace;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -31,9 +32,9 @@ public class Task implements Serializable {
 		this.script = script;
 	}
 
-	public Path initWorkspace(Ci ci, String workspaceName) {
-		LOGGER.debug("Initializing Workspace: {}", workspaceName);
-		Path workspacePath = workspace.init(ci, workspaceName);
+	public Path initWorkspace(Ci ci, Job job) {
+		LOGGER.debug("Initializing Workspace: {}", job.id);
+		Path workspacePath = workspace.init(ci, job);
 		writeScriptFile(workspacePath);
 		LOGGER.debug("Workspace initialized");
 		return workspacePath;

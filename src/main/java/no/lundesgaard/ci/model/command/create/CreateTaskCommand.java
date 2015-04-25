@@ -8,7 +8,7 @@ import no.lundesgaard.ci.model.trigger.JobsCompletedSuccessfullyTrigger;
 import no.lundesgaard.ci.model.trigger.Trigger;
 import no.lundesgaard.ci.model.trigger.TriggerType;
 import no.lundesgaard.ci.model.workspace.ClonedRepositoryWorkspace;
-import no.lundesgaard.ci.model.workspace.PreviousTasksWorkspace;
+import no.lundesgaard.ci.model.workspace.PreviousJobsWorkspace;
 import no.lundesgaard.ci.model.workspace.Workspace;
 import no.lundesgaard.ci.model.workspace.WorkspaceType;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -32,7 +32,7 @@ public class CreateTaskCommand extends CreateCommand {
 				String repositoryName = commandProperties.getProperty("trigger.repository");
 				this.trigger = new RepositoryUpdatedTrigger(repositoryName);
 				break;
-			case TASKS_COMPLETED_SUCCESSFULLY:
+			case JOBS_COMPLETED_SUCCESSFULLY:
 				String[] taskNames = commandProperties.getProperty("trigger.tasks").split(",");
 				this.trigger = new JobsCompletedSuccessfullyTrigger(taskIds(taskNames));
 				break;
@@ -45,8 +45,8 @@ public class CreateTaskCommand extends CreateCommand {
 				String repositoryName = commandProperties.getProperty("workspace.repository");
 				this.workspace = new ClonedRepositoryWorkspace(repositoryName);
 				break;
-			case PREVIOUS_TASKS:
-				this.workspace = PreviousTasksWorkspace.INSTANCE;
+			case PREVIOUS_JOBS:
+				this.workspace = PreviousJobsWorkspace.INSTANCE;
 				break;
 			default:
 				throw new IllegalArgumentException(format("Unknown workspace type: %s", workspaceType));

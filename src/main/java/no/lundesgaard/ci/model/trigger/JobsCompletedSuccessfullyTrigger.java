@@ -8,6 +8,7 @@ import no.lundesgaard.ci.model.task.Task;
 import no.lundesgaard.ci.model.task.TaskId;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +18,7 @@ import java.util.Set;
 import static java.util.Collections.addAll;
 import static java.util.Collections.unmodifiableSet;
 import static no.lundesgaard.ci.model.task.TaskId.taskId;
+import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public class JobsCompletedSuccessfullyTrigger implements Trigger {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JobsCompletedSuccessfullyTrigger.class);
@@ -41,8 +43,9 @@ public class JobsCompletedSuccessfullyTrigger implements Trigger {
 		}
 		if (taskIds.size() == 1) {
 			LOGGER.debug("Task <{}> triggered by event: {}", task.name, event);
-			Job newJob = Job.create(ci, taskId(task));
+			Job newJob = Job.create(ci, taskId(task), jobCompletedEvent.jobId);
 			newJob.queue(ci);
+			return;
 		}
 		// TODO
 		throw new NotImplementedException("TODO - taskIds.size() > 1");
@@ -50,7 +53,7 @@ public class JobsCompletedSuccessfullyTrigger implements Trigger {
 
 	@Override
 	public String toString() {
-		return new ToStringBuilder(this)
+		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
 				.append("taskIds", taskIds)
 				.toString();
 	}
