@@ -102,9 +102,9 @@ public class Ci {
         startJobProcessor();
         startRepositoryProcessor();
         startEventProcessor();
-        while (processorsIsNotStarted()) {
+        do {
             sleep();
-        }
+        } while (processorsIsNotStarted());
         LOGGER.debug("CI server started");
     }
 
