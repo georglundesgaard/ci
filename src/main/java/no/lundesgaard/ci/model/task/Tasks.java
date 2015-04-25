@@ -10,8 +10,8 @@ public class Tasks {
 		this.taskMap = taskMap;
 	}
 
-	public Task task(String name) {
-		return taskMap.get(name);
+	public Task task(TaskId taskId) {
+		return taskMap.get(taskId.id);
 	}
 
 	public Task task(Task task) {

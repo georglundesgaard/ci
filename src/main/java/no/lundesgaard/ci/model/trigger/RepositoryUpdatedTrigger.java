@@ -6,10 +6,15 @@ import no.lundesgaard.ci.model.event.RepositoryUpdatedEvent;
 import no.lundesgaard.ci.model.job.Job;
 import no.lundesgaard.ci.model.task.Task;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import static no.lundesgaard.ci.model.task.TaskId.taskId;
 import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public class RepositoryUpdatedTrigger implements Trigger {
+	private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryUpdatedTrigger.class);
+
 	public final String repositoryName;
 
 	public RepositoryUpdatedTrigger(String repositoryName) {
@@ -25,7 +30,8 @@ public class RepositoryUpdatedTrigger implements Trigger {
 		if (!this.repositoryName.equals(repositoryUpdatedEvent.repositoryName)) {
 			return;
 		}
-		Job job = Job.create(ci, task.name);
+		LOGGER.debug("Task <{}> triggered by event: {}", task.name, event);
+		Job job = Job.create(ci, taskId(task));
 		job.queue(ci);
 	}
 

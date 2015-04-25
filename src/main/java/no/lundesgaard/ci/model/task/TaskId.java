@@ -1,4 +1,4 @@
-package no.lundesgaard.ci.model.job;
+package no.lundesgaard.ci.model.task;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -6,20 +6,18 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.Serializable;
 
-import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
-
-public final class JobId implements Serializable {
+public final class TaskId implements Serializable {
 	public final String id;
 
-	public static JobId jobId(String id) {
-		return new JobId(id);
+	public static TaskId taskId(String id) {
+		return new TaskId(id);
 	}
 
-	public static JobId jobId(Job job) {
-		return jobId(job.id);
+	public static TaskId taskId(Task task) {
+		return taskId(task.name);
 	}
 
-	private JobId(String id) {
+	private TaskId(String id) {
 		this.id = id;
 	}
 
@@ -29,10 +27,10 @@ public final class JobId implements Serializable {
 
 		if (o == null || getClass() != o.getClass()) return false;
 
-		JobId jobId = (JobId) o;
+		TaskId taskId = (TaskId) o;
 
 		return new EqualsBuilder()
-				.append(id, jobId.id)
+				.append(id, taskId.id)
 				.isEquals();
 	}
 
@@ -45,7 +43,7 @@ public final class JobId implements Serializable {
 
 	@Override
 	public String toString() {
-		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
+		return new ToStringBuilder(this)
 				.append("id", id)
 				.toString();
 	}

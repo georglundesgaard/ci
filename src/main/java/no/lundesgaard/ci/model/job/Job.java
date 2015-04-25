@@ -1,7 +1,9 @@
 package no.lundesgaard.ci.model.job;
 
 import no.lundesgaard.ci.Ci;
+import no.lundesgaard.ci.model.event.JobCompletedEvent;
 import no.lundesgaard.ci.model.task.Task;
+import no.lundesgaard.ci.model.task.TaskId;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +26,7 @@ public class Job implements Serializable {
 	private final static Logger LOGGER = LoggerFactory.getLogger(Job.class);
 
 	public final String id;
-	public final String taskName;
+	public final TaskId taskId;
 	public final int jobNumber;
 	public final State state;
 	public final Instant created;
@@ -33,16 +35,16 @@ public class Job implements Serializable {
 	public final Instant stopped;
 	public final String message;
 
-	public static Job create(Ci ci, String taskName) {
-		int jobNumber = ci.nextJobNumberFor(taskName);
-		Job job = new Job(taskName, jobNumber);
+	public static Job create(Ci ci, TaskId taskId) {
+		int jobNumber = ci.nextJobNumberFor(taskId);
+		Job job = new Job(taskId, jobNumber);
 		LOGGER.debug("Created: {}", job);
 		return ci.jobs().job(job);
 	}
 
-	private Job(String taskName, int jobNumber) {
-		this.id = taskName + "#" + jobNumber;
-		this.taskName = taskName;
+	private Job(TaskId taskId, int jobNumber) {
+		this.id = taskId.id + "#" + jobNumber;
+		this.taskId = taskId;
 		this.jobNumber = jobNumber;
 		this.state = CREATED;
 		this.created = now();
@@ -54,7 +56,7 @@ public class Job implements Serializable {
 
 	private Job(Job oldJob, State newState, String message) {
 		this.id = oldJob.id;
-		this.taskName = oldJob.taskName;
+		this.taskId = oldJob.taskId;
 		this.jobNumber = oldJob.jobNumber;
 		this.state = newState;
 		this.created = oldJob.created;
@@ -89,7 +91,7 @@ public class Job implements Serializable {
 
 	public Process start(Ci ci) {
 		verifyState(WAITING);
-		Task task = ci.tasks().task(taskName);
+		Task task = ci.tasks().task(taskId);
 		Path workspacePath = task.initWorkspace(ci, id);
 		Process process = task.startProcess(workspacePath);
 		Job job = updateJob(ci, RUNNING, null);
@@ -100,6 +102,7 @@ public class Job implements Serializable {
 	public Job complete(Ci ci) {
 		verifyState(RUNNING);
 		Job job = updateJob(ci, COMPLETED, null);
+		ci.eventQueue.add(new JobCompletedEvent(jobId(job)));
 		LOGGER.debug("Completed: {}", job);
 		return job;
 	}

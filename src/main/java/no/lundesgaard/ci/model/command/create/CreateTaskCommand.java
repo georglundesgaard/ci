@@ -3,7 +3,7 @@ package no.lundesgaard.ci.model.command.create;
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.task.Task;
 import no.lundesgaard.ci.model.trigger.RepositoryUpdatedTrigger;
-import no.lundesgaard.ci.model.trigger.TasksCompletedSuccessfullyTrigger;
+import no.lundesgaard.ci.model.trigger.JobsCompletedSuccessfullyTrigger;
 import no.lundesgaard.ci.model.trigger.Trigger;
 import no.lundesgaard.ci.model.trigger.TriggerType;
 import no.lundesgaard.ci.model.workspace.ClonedRepositoryWorkspace;
@@ -33,7 +33,7 @@ public class CreateTaskCommand extends CreateCommand {
 				break;
 			case TASKS_COMPLETED_SUCCESSFULLY:
 				String[] taskNames = commandProperties.getProperty("trigger.tasks").split(",");
-				this.trigger = new TasksCompletedSuccessfullyTrigger(taskNames);
+				this.trigger = new JobsCompletedSuccessfullyTrigger(taskNames);
 				break;
 			default:
 				throw new IllegalArgumentException(format("Unknown trigger type: %s", triggerType));
@@ -78,8 +78,8 @@ public class CreateTaskCommand extends CreateCommand {
 				&& ((RepositoryUpdatedTrigger) trigger).repositoryName == null) {
 			throw new IllegalStateException("missing repository name on trigger");
 		}
-		if (trigger instanceof TasksCompletedSuccessfullyTrigger
-				&& ((TasksCompletedSuccessfullyTrigger) trigger).tasks.size() == 0) {
+		if (trigger instanceof JobsCompletedSuccessfullyTrigger
+				&& ((JobsCompletedSuccessfullyTrigger) trigger).tasks.size() == 0) {
 			throw new IllegalStateException("missing task names on trigger");
 		}
 	}

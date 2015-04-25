@@ -11,6 +11,7 @@ import no.lundesgaard.ci.model.data.simple.SimpleData;
 import no.lundesgaard.ci.model.job.JobQueue;
 import no.lundesgaard.ci.model.job.Jobs;
 import no.lundesgaard.ci.model.repository.Repositories;
+import no.lundesgaard.ci.model.task.TaskId;
 import no.lundesgaard.ci.model.task.Tasks;
 import no.lundesgaard.ci.processor.CommandProcessor;
 import no.lundesgaard.ci.processor.EventProcessor;
@@ -223,10 +224,10 @@ public class Ci {
                 || !eventProcessor.isStopped();
     }
 
-    public int nextJobNumberFor(String taskName) {
+    public int nextJobNumberFor(TaskId taskId) {
         return jobs()
                 .stream()
-                .filter(job -> job.taskName.equals(taskName))
+                .filter(job -> job.taskId.equals(taskId))
                 .mapToInt(job -> job.jobNumber)
                 .max().orElse(0) + 1;
 
