@@ -144,7 +144,7 @@ public class Job implements Serializable {
 		return ci.jobs().job(new Job(this, newState, message));
 	}
 
-	public void cloneWorkspace(Ci ci, Path targetWorkspacePath) {
+	public void copyWorkspaceTo(Ci ci, Path targetWorkspacePath) {
 		Path workspacePath = ci.workspacesPath.resolve(id);
 		try {
 			walkFileTree(workspacePath, copyFileVisitor(workspacePath, targetWorkspacePath));

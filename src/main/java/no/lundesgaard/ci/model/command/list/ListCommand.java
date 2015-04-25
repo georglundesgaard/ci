@@ -27,8 +27,8 @@ public abstract class ListCommand extends Command {
 				return ListGitRepoCommand.INSTANCE;
 			case "task":
 				return ListTaskCommand.INSTANCE;
-			case "task-status":
-				return new ListTaskStatusCommand(commandProperties);
+			case "jobs":
+				return new ListJobsCommand(commandProperties);
 			default:
 				throw new IllegalArgumentException("invalid create command (type=" + type + ")");
 		}

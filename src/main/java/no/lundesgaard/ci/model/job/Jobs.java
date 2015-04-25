@@ -1,7 +1,12 @@
 package no.lundesgaard.ci.model.job;
 
+import no.lundesgaard.ci.model.task.TaskId;
+
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
 
 public class Jobs {
 	private final Map<String, Job> jobMap;
@@ -21,5 +26,13 @@ public class Jobs {
 
 	public Stream<Job> stream() {
 		return jobMap.values().stream();
+	}
+
+	public List<Job> forTask(TaskId taskId) {
+		return jobMap
+				.values()
+				.stream()
+				.filter(job -> job.taskId.equals(taskId))
+				.collect(toList());
 	}
 }

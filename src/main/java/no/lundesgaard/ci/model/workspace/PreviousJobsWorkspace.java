@@ -17,7 +17,7 @@ public class PreviousJobsWorkspace extends Workspace {
 		Path workspacePath = createWorkspace(ci, job.id);
 		if (job.previousJobs.size() == 1) {
 			Job previousJob = ci.jobs().job(job.previousJobs.iterator().next());
-			previousJob.cloneWorkspace(ci, workspacePath);
+			previousJob.copyWorkspaceTo(ci, workspacePath);
 			return workspacePath;
 		}
 		// TODO
