@@ -68,7 +68,7 @@ public class Task implements Serializable {
 					.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLogFile))
 					.redirectError(ProcessBuilder.Redirect.appendTo(outputLogFile))
 					.start();
-			LOGGER.debug("Process started. Output log: {}/{}: ", workspacePath.getFileName(), outputLogName);
+			LOGGER.debug("Process started. Output log: {}/{} ", workspacePath.getFileName(), outputLogName);
 			return process;
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);

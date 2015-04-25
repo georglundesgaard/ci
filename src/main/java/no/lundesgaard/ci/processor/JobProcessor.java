@@ -41,8 +41,8 @@ public class JobProcessor extends Processor {
 		if (state != CREATED) {
 			throw new IllegalStateException("Job processor is already running");
 		}
-		state = WAITING;
 		LOGGER.debug("Job processor started");
+		state = WAITING;
 	}
 
 	private void tryNextJob() {

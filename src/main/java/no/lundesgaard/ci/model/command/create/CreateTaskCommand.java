@@ -15,6 +15,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import java.util.Properties;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public class CreateTaskCommand extends CreateCommand {
 	private final String name;
@@ -98,7 +99,7 @@ public class CreateTaskCommand extends CreateCommand {
 
 	@Override
 	public String toString() {
-		return new ToStringBuilder(this)
+		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
 				.append("name", name)
 				.append("trigger", trigger)
 				.append("workspace", workspace)

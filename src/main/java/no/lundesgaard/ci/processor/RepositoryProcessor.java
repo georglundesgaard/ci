@@ -36,7 +36,7 @@ public class RepositoryProcessor extends Processor {
 		if (state != CREATED) {
 			throw new IllegalStateException("Repository processor is already running");
 		}
-		state = RUNNING;
 		LOGGER.debug("Repository processor started");
+		state = RUNNING;
 	}
 }

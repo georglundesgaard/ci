@@ -34,8 +34,8 @@ public class EventProcessor extends Processor {
 		if (state != CREATED) {
 			throw new IllegalStateException("Event processor is already running");
 		}
-		state = RUNNING;
 		LOGGER.debug("Event processor started");
+		state = RUNNING;
 	}
 
 	private void processEvents() {

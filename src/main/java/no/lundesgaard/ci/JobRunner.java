@@ -27,15 +27,15 @@ public class JobRunner implements Runnable {
 		if (process != null) {
 			throw new IllegalStateException("Job runner is already started");
 		}
-		startProcess();
+		startJob();
 		waitForProcessToFinish();
 	}
 
-	private void startProcess() {
-		LOGGER.debug("Starting process...");
+	private void startJob() {
+		LOGGER.debug("Starting job...");
 		process = job.start(ci);
 		job = ci.jobs().job(jobId(job));
-		LOGGER.debug("Process started");
+		LOGGER.debug("Job started");
 	}
 
 	private void waitForProcessToFinish() {

@@ -34,8 +34,8 @@ public class CommandProcessor extends Processor {
 		if (state != CREATED) {
 			throw new IllegalStateException("Command processor is already running");
 		}
-		state = RUNNING;
 		LOGGER.debug("Command processor started");
+		state = RUNNING;
 	}
 
 	private void tryNextCommand() {
