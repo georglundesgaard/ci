@@ -26,7 +26,7 @@ public class CiOptionsTest {
 
 	@Test
 	public void constructor_givenNoParameters_isValidFalse() throws Exception {
-		assertThat(new CiOptions().isValid()).isFalse();
+		assertThat(new CiOptions().isValid()).isTrue();
 	}
 
 	@Test
