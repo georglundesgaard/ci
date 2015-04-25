@@ -66,7 +66,8 @@ public abstract class Repository implements Serializable {
 	public void copyToWorkspace(Ci ci, Path workspacePath) {
 		Path repositoryPath = ci.repositoriesPath.resolve(name);
 		try {
-			walkFileTree(repositoryPath, copyFileVisitor(repositoryPath, workspacePath));
+			Path target = workspacePath.resolve(name);
+			walkFileTree(repositoryPath, copyFileVisitor(repositoryPath, target));
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

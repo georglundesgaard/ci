@@ -6,5 +6,6 @@ workspace.type=CLONED_REPOSITORY
 workspace.repository=simply-ci
 script=#!/bin/bash\n\
 set -e\n\
+cd simply-ci\n\
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_25.jdk/Contents/Home/\n\
 mvn clean compile -DskipTests\n
