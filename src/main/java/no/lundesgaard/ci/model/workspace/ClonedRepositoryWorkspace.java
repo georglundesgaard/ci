@@ -48,7 +48,7 @@ public class ClonedRepositoryWorkspace implements Workspace {
 		try {
 			if (exists(workspacePath)) {
 				walkFileTree(workspacePath, deleteFileVisitor());
-				LOGGER.warn("Deleted existing workspace: {}", workspacePath);
+				LOGGER.warn("Deleted existing workspace: {}", workspacePath.getFileName());
 			}
 			return createDirectory(workspacePath);
 		} catch (IOException e) {
