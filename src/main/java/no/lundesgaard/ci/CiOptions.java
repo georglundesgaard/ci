@@ -9,13 +9,10 @@ import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static no.lundesgaard.ci.model.Type.SIMPLE;
 
 public class CiOptions {
-	private static final Logger LOGGER = LoggerFactory.getLogger(CiOptions.class);
 	private static final String ROOT = "root";
 	private static final String TYPE = "type";
 	private static final String HELP = "help";
@@ -76,14 +73,11 @@ public class CiOptions {
 		} else {
 			type = SIMPLE;
 		}
-		LOGGER.debug("type: {}", type);
 		return type;
 	}
 
 	private static String root(CommandLine commandLine) {
-		String root = commandLine.getOptionValue(ROOT);
-		LOGGER.debug("root: {}", root);
-		return root;
+		return commandLine.getOptionValue(ROOT);
 	}
 
 	public boolean isValid() {

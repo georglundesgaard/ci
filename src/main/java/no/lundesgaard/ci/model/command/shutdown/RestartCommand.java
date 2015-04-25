@@ -12,7 +12,7 @@ public class RestartCommand extends Command {
 
 	@Override
 	public void execute(Ci ci) {
-		ci.shutdown();
+		ci.restart();
 	}
 
 	@Override

@@ -65,6 +65,8 @@ public class Ci {
     }
 
     public Ci(Type type, String root) {
+        LOGGER.debug("type: {}", type);
+        LOGGER.debug("root: {}", root);
         this.type = type;
         this.rootPath = Paths.get(root);
         if (!exists(rootPath)) {
@@ -211,9 +213,6 @@ public class Ci {
                 do {
                     sleep();
                 } while (processorsIsNotStopped());
-                if (restart) {
-                    new Ci(this).start();
-                }
             } finally {
                 try {
                     this.data.shutdown();
@@ -222,6 +221,9 @@ public class Ci {
                 }
             }
             LOGGER.debug("CI server shutdown completed!");
+            if (restart) {
+                new Ci(this).start();
+            }
         }, restart ? "restart" : "shutdown");
     }
 
