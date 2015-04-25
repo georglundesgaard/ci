@@ -3,6 +3,7 @@ package no.lundesgaard.ci.processor;
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.JobRunner;
 import no.lundesgaard.ci.model.job.Job;
+import no.lundesgaard.ci.model.job.JobId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,14 +32,14 @@ public class JobProcessor extends Processor {
 		} finally {
 			LOGGER.debug("Job processor stopping...");
 			stopJobRunner();
-			LOGGER.debug("Job processor stopped");
 			state = STOPPED;
+			LOGGER.debug("Job processor stopped");
 		}
 	}
 
 	private void init() {
 		if (state != CREATED) {
-			throw new IllegalStateException("Job processor already running");
+			throw new IllegalStateException("Job processor is already running");
 		}
 		state = WAITING;
 		LOGGER.debug("Job processor started");
@@ -48,10 +49,12 @@ public class JobProcessor extends Processor {
 		if (state == RUNNING) {
 			return;
 		}
-		Job job = ci.jobQueue().next();
-		if (job == null) {
+		JobId nextJobId = ci.jobQueue().next();
+		if (nextJobId == null) {
 			return;
 		}
+		Job job = ci.jobs().job(nextJobId);
+		LOGGER.debug("Job accepted: {}", job);
 		currentJobRunner = new JobRunner(ci, job);
 		new Thread(currentJobRunner, currentJobRunner.name()).start();
 	}

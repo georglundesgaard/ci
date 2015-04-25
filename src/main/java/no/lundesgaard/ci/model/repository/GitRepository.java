@@ -3,6 +3,8 @@ package no.lundesgaard.ci.model.repository;
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.event.RepositoryUpdatedEvent;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,6 +21,8 @@ import static java.time.Instant.now;
 import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public class GitRepository extends Repository {
+	private static final Logger LOGGER = LoggerFactory.getLogger(GitRepository.class);
+
 	private final String lastCommitId;
 
 	public GitRepository(String name, String url, String nodeId) {
@@ -39,19 +43,24 @@ public class GitRepository extends Repository {
 	@Override
 	public Repository scan(Ci ci) {
 		try {
+			LOGGER.debug("Scanning repository: {}", this.name);
 			Path repositoryPath = ci.repositoriesPath.resolve(this.name);
 			ci.createDirectoryIfNotExists(repositoryPath);
 			File outputLog = ci.repositoriesPath.resolve(name + ".log").toFile();
 			if (isEmpty(repositoryPath)) {
+				LOGGER.debug("Cloning repository: {}", this.url);
 				cloneRepository(repositoryPath, outputLog);
 			} else {
+				LOGGER.debug("Updating repository: {}", this.url);
 				updateRepository(repositoryPath, outputLog);
 			}
 			String lastCommitId = findLastCommitId(repositoryPath);
 			if (!lastCommitId.equals(this.lastCommitId)) {
+				LOGGER.debug("Repository has new changes (lastCommitId={})", lastCommitId);
 				ci.eventQueue.add(new RepositoryUpdatedEvent(this.name, lastCommitId));
 				return new GitRepository(this, now(), null, lastCommitId);
 			}
+			LOGGER.debug("Repository up-to-date (lastCommitId={})", lastCommitId);
 			return new GitRepository(this, now());
 		} catch (RuntimeException e) {
 			return new GitRepository(this, now(), e.getMessage(), null);

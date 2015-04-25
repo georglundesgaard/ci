@@ -20,18 +20,19 @@ public class RepositoryProcessor extends Processor {
 		init();
 		try {
 			while (state == RUNNING) {
-				ci.repositories().scan(ci);
+				int repositoriesScanned = ci.repositories().scan(ci);
+				LOGGER.debug("Repositories scanned: {}", repositoriesScanned);
 				sleep();
 			}
 		} finally {
-			LOGGER.debug("Repository processor stopped");
 			state = STOPPED;
+			LOGGER.debug("Repository processor stopped");
 		}
 	}
 
 	private void init() {
 		if (state != CREATED) {
-			throw new IllegalStateException("Repository processor already running");
+			throw new IllegalStateException("Repository processor is already running");
 		}
 		state = RUNNING;
 		LOGGER.debug("Repository processor started");

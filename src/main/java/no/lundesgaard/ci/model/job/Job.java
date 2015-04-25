@@ -2,6 +2,8 @@ package no.lundesgaard.ci.model.job;
 
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.task.Task;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.time.Instant;
@@ -15,6 +17,8 @@ import static no.lundesgaard.ci.model.job.Job.State.RUNNING;
 import static no.lundesgaard.ci.model.job.Job.State.WAITING;
 
 public class Job {
+	private final static Logger LOGGER = LoggerFactory.getLogger(Job.class);
+
 	public final String id;
 	public final String taskName;
 	public final int jobNumber;
@@ -25,7 +29,14 @@ public class Job {
 	public final Instant stopped;
 	public final String message;
 
-	public Job(String taskName, int jobNumber) {
+	public static Job create(Ci ci, String taskName) {
+		int jobNumber = ci.nextJobNumberFor(taskName);
+		Job job = new Job(taskName, jobNumber);
+		LOGGER.debug("Created: {}", job);
+		return ci.jobs().job(job);
+	}
+
+	private Job(String taskName, int jobNumber) {
 		this.id = taskName + "#" + jobNumber;
 		this.taskName = taskName;
 		this.jobNumber = jobNumber;
@@ -64,9 +75,12 @@ public class Job {
 		}
 	}
 
-	public Job queue() {
+	public Job queue(Ci ci) {
 		verifyState(CREATED);
-		return new Job(this, WAITING, null);
+		Job job = updateJob(ci, WAITING, null);
+		ci.jobQueue().add(new JobId(job.id));
+		LOGGER.debug("Queued: {}", job);
+		return job;
 	}
 
 	public Process start(Ci ci) {
@@ -74,18 +88,23 @@ public class Job {
 		Task task = ci.tasks().task(taskName);
 		Path workspacePath = task.initWorkspace(ci, id);
 		Process process = task.startProcess(workspacePath);
-		updateJob(ci, RUNNING, null);
+		Job job = updateJob(ci, RUNNING, null);
+		LOGGER.debug("Started: {}", job);
 		return process;
 	}
 
 	public Job complete(Ci ci) {
 		verifyState(RUNNING);
-		return updateJob(ci, COMPLETED, null);
+		Job job = updateJob(ci, COMPLETED, null);
+		LOGGER.debug("Completed: {}", job);
+		return job;
 	}
 
 	public Job fail(Ci ci, int exitCode) {
 		verifyState(RUNNING);
-		return updateJob(ci, FAILED, format("Exit code: %d", exitCode));
+		Job job = updateJob(ci, FAILED, format("Exit code: %d", exitCode));
+		LOGGER.debug("Failed: {}", job);
+		return job;
 	}
 
 	private void verifyState(State state) {

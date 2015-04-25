@@ -16,6 +16,11 @@ public class SimpleData implements Data {
 	private final JobQueue jobQueue = new JobQueue(new LinkedList<>());
 
 	@Override
+	public String nodeId() {
+		return "simple";
+	}
+
+	@Override
 	public Repositories repositories() {
 		return repositories;
 	}

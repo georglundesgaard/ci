@@ -4,6 +4,8 @@ import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.trigger.Trigger;
 import no.lundesgaard.ci.model.workspace.Workspace;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -15,6 +17,8 @@ import java.nio.file.Path;
 import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public class Task implements Serializable {
+	private final static Logger LOGGER = LoggerFactory.getLogger(Task.class);
+
 	public final String name;
 	public final Trigger trigger;
 	public final Workspace workspace;
@@ -28,15 +32,19 @@ public class Task implements Serializable {
 	}
 
 	public Path initWorkspace(Ci ci, String workspaceName) {
+		LOGGER.debug("Initializing Workspace: {}", workspaceName);
 		Path workspacePath = workspace.init(ci, workspaceName);
 		writeScriptFile(workspacePath);
+		LOGGER.debug("Workspace initialized");
 		return workspacePath;
 	}
 
 	private void writeScriptFile(Path workspacePath) {
-		Path scriptPath = workspacePath.resolve(scriptName());
+		String scriptName = scriptName();
+		Path scriptPath = workspacePath.resolve(scriptName);
 		try (FileWriter fileWriter = new FileWriter(scriptPath.toFile())) {
 			fileWriter.write(script);
+			LOGGER.debug("Script file written: {}", scriptName);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -51,13 +59,17 @@ public class Task implements Serializable {
 	}
 
 	public Process startProcess(Path workspacePath) {
-		File outputLogFile = workspacePath.resolve(outputLogName()).toFile();
+		LOGGER.debug("Starting process...");
+		String outputLogName = outputLogName();
+		File outputLogFile = workspacePath.resolve(outputLogName).toFile();
 		try {
-			return new ProcessBuilder("sh", scriptName())
+			Process process = new ProcessBuilder("sh", scriptName())
 					.directory(workspacePath.toFile())
 					.redirectOutput(ProcessBuilder.Redirect.appendTo(outputLogFile))
 					.redirectError(ProcessBuilder.Redirect.appendTo(outputLogFile))
 					.start();
+			LOGGER.debug("Process started. Output log: {}/{}: ", workspacePath.getFileName(), outputLogName);
+			return process;
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

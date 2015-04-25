@@ -33,6 +33,7 @@ import static org.apache.commons.lang3.StringUtils.uncapitalize;
 public class Ci {
     private static final Logger LOGGER = LoggerFactory.getLogger(Ci.class);
 
+    public final Path rootPath;
     public final Path repositoriesPath;
     public final Path commandsPath;
     public final Path workspacesPath;
@@ -56,7 +57,7 @@ public class Ci {
 
     public Ci(CiOptions ciOptions) throws IOException {
         this.type = ciOptions.type;
-        Path rootPath = Paths.get(ciOptions.root);
+        this.rootPath = Paths.get(ciOptions.root);
         if (!exists(rootPath)) {
             Files.createDirectories(rootPath);
         }
@@ -90,10 +91,10 @@ public class Ci {
 
     public void start() {
         if (isRunning()) {
-            LOGGER.error("CI-server already running");
+            LOGGER.error("CI server is already running");
             return;
         }
-        LOGGER.debug("CI-server starting...");
+        LOGGER.debug("CI server starting...");
         createDirectoriesIfNotExists();
         initData();
         startCommandProcessor();
@@ -103,7 +104,7 @@ public class Ci {
         while (processorsIsNotStarted()) {
             sleep();
         }
-        LOGGER.debug("CI-server started");
+        LOGGER.debug("CI server started");
     }
 
     private boolean isRunning() {
@@ -120,9 +121,13 @@ public class Ci {
         if (!exists(directoryPath)) {
             try {
                 Files.createDirectory(directoryPath);
+                LOGGER.debug("Directory created: {}", directoryPath);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
+        }
+        if (!isDirectory(directoryPath)) {
+            throw new IllegalArgumentException(directoryPath + " is not a directory");
         }
     }
 
@@ -132,11 +137,13 @@ public class Ci {
             config.setProperty("hazelcast.logging.type", "slf4j");
             HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(config);
             this.data = new HazelcastData(hazelcastInstance);
-            this.nodeId = hazelcastInstance.getLocalEndpoint().getUuid();
+            LOGGER.debug("Hazelcast data store initialized");
         } else {
             this.data = new SimpleData();
-            this.nodeId = "simple";
+            LOGGER.debug("Simple data store initialized");
         }
+        this.nodeId = data.nodeId();
+        LOGGER.debug("Node id: {}", nodeId);
     }
 
     private void startCommandProcessor() {
@@ -177,7 +184,7 @@ public class Ci {
 
     public void shutdown() {
         startNewThread(() -> {
-            LOGGER.debug("CI-server shutting down...");
+            LOGGER.debug("CI server shutting down...");
             try {
                 stopProcessors();
                 do {
@@ -190,7 +197,7 @@ public class Ci {
                     this.nodeId = null;
                 }
             }
-            LOGGER.debug("CI-server shutdown completed!");
+            LOGGER.debug("CI server shutdown completed!");
         }, "shutdown");
     }
 

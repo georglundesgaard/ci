@@ -6,6 +6,7 @@ import no.lundesgaard.ci.model.repository.Repositories;
 import no.lundesgaard.ci.model.task.Tasks;
 
 public interface Data {
+	String nodeId();
 	Repositories repositories();
 	Tasks tasks();
 	Jobs jobs();

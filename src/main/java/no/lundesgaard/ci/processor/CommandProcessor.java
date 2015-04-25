@@ -32,7 +32,7 @@ public class CommandProcessor extends Processor {
 
 	private void init() {
 		if (state != CREATED) {
-			throw new IllegalStateException("Command processor already running");
+			throw new IllegalStateException("Command processor is already running");
 		}
 		state = RUNNING;
 		LOGGER.debug("Command processor started");
@@ -45,9 +45,10 @@ public class CommandProcessor extends Processor {
 		}
 		try {
 			command.validate();
+			LOGGER.debug("Command accepted: {}", command);
 			command.execute(ci);
 		} catch (IllegalStateException e) {
-			LOGGER.error("Invalid command: {}", command.type(), e);
+			LOGGER.warn("Invalid command: {}", command, e);
 		}
 	}
 }

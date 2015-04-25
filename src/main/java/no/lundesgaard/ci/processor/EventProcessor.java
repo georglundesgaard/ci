@@ -1,6 +1,7 @@
 package no.lundesgaard.ci.processor;
 
 import no.lundesgaard.ci.Ci;
+import no.lundesgaard.ci.model.event.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,15 +32,18 @@ public class EventProcessor extends Processor {
 
 	private void init() {
 		if (state != CREATED) {
-			throw new IllegalStateException("Event processor already running");
+			throw new IllegalStateException("Event processor is already running");
 		}
 		state = RUNNING;
 		LOGGER.debug("Event processor started");
 	}
 
 	private void processEvents() {
-		while (ci.eventQueue.isNotEmpty()) {
-			ci.eventQueue.remove().process(ci);
+		Event event;
+		while ((event = ci.eventQueue.next()) != null) {
+			LOGGER.debug("Event accepted: {}", event);
+			event.process(ci);
+			LOGGER.debug("Event processed: {}", event);
 		}
 	}
 }

@@ -1,17 +1,18 @@
 package no.lundesgaard.ci.model.event;
 
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 
 public class EventQueue {
 	private final Queue<Event> queue = new LinkedList<>();
 
-	public boolean isNotEmpty() {
-		return !queue.isEmpty();
-	}
-
-	public Event remove() {
-		return queue.remove();
+	public Event next() {
+		try {
+			return queue.remove();
+		} catch (NoSuchElementException e) {
+			return null;
+		}
 	}
 
 	public void add(Event event) {

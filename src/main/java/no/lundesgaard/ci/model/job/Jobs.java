@@ -15,8 +15,8 @@ public class Jobs {
 		return job;
 	}
 
-	public Job job(String id) {
-		return jobMap.get(id);
+	public Job job(JobId jobId) {
+		return jobMap.get(jobId.id);
 	}
 
 	public Stream<Job> stream() {

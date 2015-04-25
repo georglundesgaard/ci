@@ -25,7 +25,8 @@ public class RepositoryUpdatedTrigger implements Trigger {
 		if (!this.repositoryName.equals(repositoryUpdatedEvent.repositoryName)) {
 			return;
 		}
-		ci.jobQueue().add(new Job(task.name, ci.nextJobNumberFor(task.name)));
+		Job job = Job.create(ci, task.name);
+		job.queue(ci);
 	}
 
 	@Override

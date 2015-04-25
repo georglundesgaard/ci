@@ -15,6 +15,11 @@ public class HazelcastData implements Data {
 	}
 
 	@Override
+	public String nodeId() {
+		return hazelcastInstance.getLocalEndpoint().getUuid();
+	}
+
+	@Override
 	public Repositories repositories() {
 		return new Repositories(hazelcastInstance.getMap("repositoryMap"));
 	}

@@ -1,6 +1,7 @@
 package no.lundesgaard.ci;
 
 import no.lundesgaard.ci.model.job.Job;
+import no.lundesgaard.ci.model.job.JobId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +24,7 @@ public class JobRunner implements Runnable {
 	@Override
 	public void run() {
 		if (process != null) {
-			throw new IllegalStateException("Job runner already started");
+			throw new IllegalStateException("Job runner is already started");
 		}
 		startProcess();
 		waitForProcessToFinish();
@@ -31,11 +32,12 @@ public class JobRunner implements Runnable {
 
 	private void startProcess() {
 		process = job.start(ci);
-		job = ci.jobs().job(job.id);
-		LOGGER.debug("Job runner started");
+		job = ci.jobs().job(new JobId(job.id));
+		LOGGER.debug("Process started: {}", process);
 	}
 
 	private void waitForProcessToFinish() {
+		LOGGER.debug("Waiting for process to finish");
 		try {
 			int exitCode = process.waitFor();
 			if (exitCode == 0) {
@@ -43,7 +45,7 @@ public class JobRunner implements Runnable {
 			} else {
 				job = job.fail(ci, exitCode);
 			}
-			LOGGER.debug("Job runner completed. Exit code: {}", exitCode);
+			LOGGER.debug("Finished. Exit code: {}", exitCode);
 		} catch (InterruptedException e) {
 			LOGGER.warn("Waiting for process <{}> was interrupted.", process, e);
 		}
