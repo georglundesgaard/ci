@@ -1,8 +1,8 @@
 package no.lundesgaard.ci.model.trigger;
 
 import no.lundesgaard.ci.Ci;
-import no.lundesgaard.ci.event.Event;
-import no.lundesgaard.ci.event.RepositoryUpdatedEvent;
+import no.lundesgaard.ci.model.event.Event;
+import no.lundesgaard.ci.model.event.RepositoryUpdatedEvent;
 import no.lundesgaard.ci.model.job.Job;
 import no.lundesgaard.ci.model.task.Task;
 import org.apache.commons.lang3.builder.ToStringBuilder;

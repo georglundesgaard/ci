@@ -1,0 +1,3 @@
+type=git-repo
+name=simply-ci
+url=git@github.com:georglundesgaard/simply-ci.git

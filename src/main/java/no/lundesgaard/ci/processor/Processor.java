@@ -34,6 +34,10 @@ public abstract class Processor implements Runnable {
 		return state == STOPPED;
 	}
 
+	public boolean isStarted() {
+		return state != CREATED;
+	}
+
 	public enum State {
 		CREATED, WAITING, RUNNING, STOPPING, STOPPED
 	}

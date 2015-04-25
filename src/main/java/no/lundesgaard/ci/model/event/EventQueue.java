@@ -1,4 +1,4 @@
-package no.lundesgaard.ci.event;
+package no.lundesgaard.ci.model.event;
 
 import java.util.LinkedList;
 import java.util.Queue;

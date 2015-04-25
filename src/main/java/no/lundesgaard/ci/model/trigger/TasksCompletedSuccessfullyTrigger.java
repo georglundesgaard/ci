@@ -1,8 +1,7 @@
 package no.lundesgaard.ci.model.trigger;
 
 import no.lundesgaard.ci.Ci;
-import no.lundesgaard.ci.event.Event;
-import no.lundesgaard.ci.event.TaskCompletedEvent;
+import no.lundesgaard.ci.model.event.Event;
 import no.lundesgaard.ci.model.task.Task;
 
 import java.util.HashSet;

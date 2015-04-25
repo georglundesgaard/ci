@@ -1,4 +1,4 @@
-package no.lundesgaard.ci.event;
+package no.lundesgaard.ci.model.event;
 
 import no.lundesgaard.ci.Ci;
 import org.apache.commons.lang3.builder.ToStringBuilder;

@@ -3,7 +3,7 @@ package no.lundesgaard.ci;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import no.lundesgaard.ci.event.EventQueue;
+import no.lundesgaard.ci.model.event.EventQueue;
 import no.lundesgaard.ci.model.Type;
 import no.lundesgaard.ci.model.data.Data;
 import no.lundesgaard.ci.model.data.hazelcast.HazelcastData;
@@ -100,6 +100,9 @@ public class Ci {
         startJobProcessor();
         startRepositoryProcessor();
         startEventProcessor();
+        while (processorsIsNotStarted()) {
+            sleep();
+        }
         LOGGER.debug("CI-server started");
     }
 
@@ -154,6 +157,13 @@ public class Ci {
     private void startEventProcessor() {
         this.eventProcessor = new EventProcessor(this);
         startNewThread(eventProcessor);
+    }
+
+    private boolean processorsIsNotStarted() {
+        return !commandProcessor.isStarted()
+                && !jobProcessor.isStarted()
+                && !repositoryProcessor.isStarted()
+                && !eventProcessor.isStarted();
     }
 
     private void startNewThread(Runnable target) {
