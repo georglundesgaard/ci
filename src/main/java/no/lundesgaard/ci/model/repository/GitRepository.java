@@ -63,7 +63,8 @@ public class GitRepository extends Repository {
 			LOGGER.debug("Repository up-to-date (lastCommitId={})", lastCommitId);
 			return new GitRepository(this, now());
 		} catch (RuntimeException e) {
-			return new GitRepository(this, now(), e.getMessage(), null);
+			LOGGER.error("Failed to clone/update repository", e);
+			return new GitRepository(this, now(), e.getMessage(), this.lastCommitId);
 		}
 	}
 

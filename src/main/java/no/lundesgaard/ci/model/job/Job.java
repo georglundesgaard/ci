@@ -2,9 +2,11 @@ package no.lundesgaard.ci.model.job;
 
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.task.Task;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.nio.file.Path;
 import java.time.Instant;
 
@@ -15,8 +17,10 @@ import static no.lundesgaard.ci.model.job.Job.State.CREATED;
 import static no.lundesgaard.ci.model.job.Job.State.FAILED;
 import static no.lundesgaard.ci.model.job.Job.State.RUNNING;
 import static no.lundesgaard.ci.model.job.Job.State.WAITING;
+import static no.lundesgaard.ci.model.job.JobId.jobId;
+import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
-public class Job {
+public class Job implements Serializable {
 	private final static Logger LOGGER = LoggerFactory.getLogger(Job.class);
 
 	public final String id;
@@ -78,7 +82,7 @@ public class Job {
 	public Job queue(Ci ci) {
 		verifyState(CREATED);
 		Job job = updateJob(ci, WAITING, null);
-		ci.jobQueue().add(new JobId(job.id));
+		ci.jobQueue().add(jobId(job));
 		LOGGER.debug("Queued: {}", job);
 		return job;
 	}
@@ -115,6 +119,19 @@ public class Job {
 
 	private Job updateJob(Ci ci, State newState, String message) {
 		return ci.jobs().job(new Job(this, newState, message));
+	}
+
+	@Override
+	public String toString() {
+		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
+				.append("id", id)
+				.append("state", state)
+				.append("created", created)
+				.append("updated", updated)
+				.append("started", started)
+				.append("stopped", stopped)
+				.append("message", message)
+				.toString();
 	}
 
 	public enum State {

@@ -1,9 +1,10 @@
 package no.lundesgaard.ci;
 
 import no.lundesgaard.ci.model.job.Job;
-import no.lundesgaard.ci.model.job.JobId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static no.lundesgaard.ci.model.job.JobId.jobId;
 
 public class JobRunner implements Runnable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JobRunner.class);
@@ -31,13 +32,14 @@ public class JobRunner implements Runnable {
 	}
 
 	private void startProcess() {
+		LOGGER.debug("Starting process...");
 		process = job.start(ci);
-		job = ci.jobs().job(new JobId(job.id));
-		LOGGER.debug("Process started: {}", process);
+		job = ci.jobs().job(jobId(job));
+		LOGGER.debug("Process started");
 	}
 
 	private void waitForProcessToFinish() {
-		LOGGER.debug("Waiting for process to finish");
+		LOGGER.debug("Waiting for process to terminate");
 		try {
 			int exitCode = process.waitFor();
 			if (exitCode == 0) {
@@ -45,9 +47,9 @@ public class JobRunner implements Runnable {
 			} else {
 				job = job.fail(ci, exitCode);
 			}
-			LOGGER.debug("Finished. Exit code: {}", exitCode);
+			LOGGER.debug("Process terminated. Exit code: {}", exitCode);
 		} catch (InterruptedException e) {
-			LOGGER.warn("Waiting for process <{}> was interrupted.", process, e);
+			LOGGER.warn("Wait for process termination was interrupted.", e);
 		}
 	}
 
