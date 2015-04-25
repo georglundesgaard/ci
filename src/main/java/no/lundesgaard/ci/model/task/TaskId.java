@@ -2,7 +2,6 @@ package no.lundesgaard.ci.model.task;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.Serializable;
 
@@ -43,8 +42,6 @@ public final class TaskId implements Serializable {
 
 	@Override
 	public String toString() {
-		return new ToStringBuilder(this)
-				.append("id", id)
-				.toString();
+		return id;
 	}
 }

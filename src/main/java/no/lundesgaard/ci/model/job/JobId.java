@@ -2,11 +2,8 @@ package no.lundesgaard.ci.model.job;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.Serializable;
-
-import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public final class JobId implements Serializable {
 	public final String id;
@@ -45,8 +42,6 @@ public final class JobId implements Serializable {
 
 	@Override
 	public String toString() {
-		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
-				.append("id", id)
-				.toString();
+		return id;
 	}
 }
