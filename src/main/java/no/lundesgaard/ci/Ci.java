@@ -47,7 +47,7 @@ public class Ci {
     private RepositoryProcessor repositoryProcessor;
     private EventProcessor eventProcessor;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         CiOptions ciOptions = new CiOptions(args);
         if (ciOptions.isValid()) {
             new Ci(ciOptions).start();
@@ -56,14 +56,26 @@ public class Ci {
         }
     }
 
-    public Ci(CiOptions ciOptions) throws IOException {
-        this.type = ciOptions.type;
-        this.rootPath = Paths.get(ciOptions.root);
+    public Ci(CiOptions ciOptions) {
+        this(ciOptions.type, ciOptions.root);
+    }
+
+    private Ci(Ci oldCi) {
+        this(oldCi.type, oldCi.rootPath.toString());
+    }
+
+    public Ci(Type type, String root) {
+        this.type = type;
+        this.rootPath = Paths.get(root);
         if (!exists(rootPath)) {
-            Files.createDirectories(rootPath);
+            try {
+                Files.createDirectories(rootPath);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         }
         if (!isDirectory(rootPath)) {
-            throw new IllegalArgumentException("CI root <" + ciOptions.root + "> is not a directory");
+            throw new IllegalArgumentException("CI root <" + root + "> is not a directory");
         }
         this.repositoriesPath = rootPath.resolve("repositories");
         this.commandsPath = rootPath.resolve("commands");
@@ -184,6 +196,14 @@ public class Ci {
     }
 
     public void shutdown() {
+        shutdown(false);
+    }
+
+    public void restart() {
+        shutdown(true);
+    }
+
+    private void shutdown(boolean restart) {
         startNewThread(() -> {
             LOGGER.debug("CI server shutting down...");
             try {
@@ -191,6 +211,9 @@ public class Ci {
                 do {
                     sleep();
                 } while (processorsIsNotStopped());
+                if (restart) {
+                    new Ci(this).start();
+                }
             } finally {
                 try {
                     this.data.shutdown();
@@ -199,7 +222,7 @@ public class Ci {
                 }
             }
             LOGGER.debug("CI server shutdown completed!");
-        }, "shutdown");
+        }, restart ? "restart" : "shutdown");
     }
 
     private void stopProcessors() {

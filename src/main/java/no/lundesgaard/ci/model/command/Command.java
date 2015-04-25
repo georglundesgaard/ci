@@ -4,6 +4,7 @@ import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.command.create.CreateCommand;
 import no.lundesgaard.ci.model.command.list.ListCommand;
 import no.lundesgaard.ci.model.command.show.ShowCommand;
+import no.lundesgaard.ci.model.command.shutdown.RestartCommand;
 import no.lundesgaard.ci.model.command.shutdown.ShutdownCommand;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
@@ -24,6 +25,8 @@ public abstract class Command {
         switch (type) {
             case SHUTDOWN:
                 return ShutdownCommand.INSTANCE;
+            case RESTART:
+                return RestartCommand.INSTANCE;
             case CREATE:
                 return CreateCommand.from(commandPath);
             case LIST:

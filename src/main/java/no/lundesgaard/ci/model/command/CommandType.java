@@ -4,6 +4,7 @@ import java.nio.file.Path;
 
 public enum CommandType {
 	SHUTDOWN,
+	RESTART,
 	CREATE,
 	LIST,
 	SHOW;
