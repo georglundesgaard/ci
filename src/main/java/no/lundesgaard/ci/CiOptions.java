@@ -21,7 +21,7 @@ public class CiOptions {
 	public final Type type;
 	public final String root;
 
-	public CiOptions(String[] args) {
+	public CiOptions(String... args) {
 		this.options = options();
 		CommandLine commandLine = commandLine(options, args);
 		if (commandLine == null || commandLine.hasOption(HELP)) {
