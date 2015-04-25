@@ -23,8 +23,8 @@ public abstract class ShowCommand extends Command {
 		}
 		String type = commandProperties.getProperty("type", "unknown");
 		switch (type) {
-			case "task-log":
-				return new ShowTaskLogCommand(commandProperties);
+			case "latest-job":
+				return new ShowLatestJobCommand(commandProperties);
 			default:
 				throw new IllegalArgumentException("invalid show command (type=" + type + ")");
 		}

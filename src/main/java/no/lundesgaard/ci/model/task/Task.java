@@ -76,7 +76,7 @@ public class Task implements Serializable {
 		}
 	}
 
-	private String outputLogName() {
+	public String outputLogName() {
 		return commonName() + ".log";
 	}
 

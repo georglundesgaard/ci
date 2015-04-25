@@ -39,7 +39,12 @@ public class CommandProcessor extends Processor {
 	}
 
 	private void tryNextCommand() {
-		Command command = Command.nextFrom(ci.commandsPath);
+		Command command = null;
+		try {
+			command = Command.nextFrom(ci.commandsPath);
+		} catch (IllegalArgumentException e) {
+			LOGGER.warn("Invalid command", e);
+		}
 		if (command == null) {
 			return;
 		}

@@ -175,6 +175,13 @@ public class Job implements Serializable {
 		};
 	}
 
+	public Instant lastUpdated() {
+		if (updated != null) {
+			return updated;
+		}
+		return created;
+	}
+
 	@Override
 	public String toString() {
 		return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
