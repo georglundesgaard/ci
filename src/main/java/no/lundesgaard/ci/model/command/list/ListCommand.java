@@ -1,14 +1,14 @@
-package no.lundesgaard.ci.command.list;
+package no.lundesgaard.ci.model.command.list;
 
-import no.lundesgaard.ci.command.Command;
-import no.lundesgaard.ci.command.CommandType;
+import no.lundesgaard.ci.model.command.Command;
+import no.lundesgaard.ci.model.command.CommandType;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Properties;
 
-import static no.lundesgaard.ci.command.CommandType.LIST;
+import static no.lundesgaard.ci.model.command.CommandType.LIST;
 
 public abstract class ListCommand extends Command {
 	@Override

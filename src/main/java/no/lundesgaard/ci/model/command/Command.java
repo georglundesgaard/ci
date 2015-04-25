@@ -1,10 +1,11 @@
-package no.lundesgaard.ci.command;
+package no.lundesgaard.ci.model.command;
 
 import no.lundesgaard.ci.Ci;
-import no.lundesgaard.ci.command.create.CreateCommand;
-import no.lundesgaard.ci.command.list.ListCommand;
-import no.lundesgaard.ci.command.show.ShowCommand;
-import no.lundesgaard.ci.command.shutdown.ShutdownCommand;
+import no.lundesgaard.ci.model.command.create.CreateCommand;
+import no.lundesgaard.ci.model.command.list.ListCommand;
+import no.lundesgaard.ci.model.command.show.ShowCommand;
+import no.lundesgaard.ci.model.command.shutdown.ShutdownCommand;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -15,6 +16,7 @@ import java.util.stream.Stream;
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.list;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 
 public abstract class Command {
     public static Command from(Path commandPath) throws IOException {
@@ -64,4 +66,9 @@ public abstract class Command {
 
     public abstract CommandType type();
 
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, SHORT_PREFIX_STYLE)
+                .toString();
+    }
 }

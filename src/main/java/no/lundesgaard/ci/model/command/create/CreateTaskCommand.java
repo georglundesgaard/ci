@@ -1,4 +1,4 @@
-package no.lundesgaard.ci.command.create;
+package no.lundesgaard.ci.model.command.create;
 
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.task.Task;
@@ -10,6 +10,7 @@ import no.lundesgaard.ci.model.workspace.ClonedRepositoryWorkspace;
 import no.lundesgaard.ci.model.workspace.PreviousTasksWorkspace;
 import no.lundesgaard.ci.model.workspace.Workspace;
 import no.lundesgaard.ci.model.workspace.WorkspaceType;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.util.Properties;
 
@@ -93,5 +94,14 @@ public class CreateTaskCommand extends CreateCommand {
 		if (script == null) {
 			throw new IllegalStateException("missing script");
 		}
+	}
+
+	@Override
+	public String toString() {
+		return new ToStringBuilder(this)
+				.append("name", name)
+				.append("trigger", trigger)
+				.append("workspace", workspace)
+				.toString();
 	}
 }

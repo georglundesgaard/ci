@@ -1,8 +1,10 @@
-package no.lundesgaard.ci.command.create;
+package no.lundesgaard.ci.model.command.create;
 
 import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.repository.GitRepository;
 import no.lundesgaard.ci.model.repository.Repository;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.util.Properties;
 
@@ -37,5 +39,14 @@ public class CreateGitRepoCommand extends CreateCommand {
 		if (url == null) {
 			throw new IllegalStateException("mssing url");
 		}
+	}
+
+	@Override
+	public String toString() {
+		return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+				.appendSuper(super.toString())
+				.append("name", name)
+				.append("url", url)
+				.toString();
 	}
 }

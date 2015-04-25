@@ -1,4 +1,4 @@
-package no.lundesgaard.ci.command.show;
+package no.lundesgaard.ci.model.command.show;
 
 import no.lundesgaard.ci.Ci;
 import org.slf4j.Logger;

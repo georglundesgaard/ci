@@ -1,14 +1,15 @@
-package no.lundesgaard.ci.command.create;
+package no.lundesgaard.ci.model.command.create;
 
-import no.lundesgaard.ci.command.Command;
-import no.lundesgaard.ci.command.CommandType;
+import no.lundesgaard.ci.model.command.Command;
+import no.lundesgaard.ci.model.command.CommandType;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Properties;
 
-import static no.lundesgaard.ci.command.CommandType.CREATE;
+import static no.lundesgaard.ci.model.command.CommandType.CREATE;
 
 public abstract class CreateCommand extends Command {
     @Override

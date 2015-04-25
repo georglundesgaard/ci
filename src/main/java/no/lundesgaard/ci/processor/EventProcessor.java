@@ -43,7 +43,7 @@ public class EventProcessor extends Processor {
 		while ((event = ci.eventQueue.next()) != null) {
 			LOGGER.debug("Event accepted: {}", event);
 			event.process(ci);
-			LOGGER.debug("Event processed: {}", event);
+			LOGGER.debug("Event processed");
 		}
 	}
 }

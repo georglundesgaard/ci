@@ -1,7 +1,7 @@
 package no.lundesgaard.ci.processor;
 
 import no.lundesgaard.ci.Ci;
-import no.lundesgaard.ci.command.Command;
+import no.lundesgaard.ci.model.command.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

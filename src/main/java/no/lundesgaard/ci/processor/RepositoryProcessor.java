@@ -21,7 +21,9 @@ public class RepositoryProcessor extends Processor {
 		try {
 			while (state == RUNNING) {
 				int repositoriesScanned = ci.repositories().scan(ci);
-				LOGGER.debug("Repositories scanned: {}", repositoriesScanned);
+				if (repositoriesScanned > 0) {
+					LOGGER.debug("Repositories scanned: {}", repositoriesScanned);
+				}
 				sleep();
 			}
 		} finally {
