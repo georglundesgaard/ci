@@ -41,9 +41,10 @@ public class Ci {
 	private String nodeId;
 	private Data data;
 	public final EventQueue eventQueue = new EventQueue();
-	private CommandProcessor commandProcessor;
+	private final CommandProcessor commandProcessor;
 	private RepositoryProcessor repositoryProcessor;
 	private final EventProcessor eventProcessor;
+	private State state;
 
 	public static void main(String[] args) {
 		CiOptions ciOptions = new CiOptions(args);
@@ -82,7 +83,9 @@ public class Ci {
 		this.commandsPath = rootPath.resolve("commands");
 		this.workspacesPath = rootPath.resolve("workspaces");
 		this.jobRunners = new JobRunner[jobRunnerCount];
+		this.commandProcessor = new CommandProcessor(this);
 		this.eventProcessor = new EventProcessor(this);
+		this.state = State.CREATED;
 	}
 
 	public String nodeId() {
@@ -106,24 +109,26 @@ public class Ci {
 	}
 
 	public void start() {
-		if (isRunning()) {
-			LOGGER.error("CI server is already running");
+		if (isAlreadyStarted()) {
+			LOGGER.error("CI server is already started");
 			return;
 		}
 		LOGGER.debug("CI server starting...");
 		createDirectoriesIfNotExists();
 		initData();
 		initJobRunners();
-		startCommandProcessor();
+		commandProcessor.startSubscription();
 		startRepositoryProcessor();
 		eventProcessor.startSubscription();
 		do {
 			sleep();
 		} while (!processorsIsRunning());
 		LOGGER.debug("CI server started");
+		this.state = State.RUNNING;
+		lifecycle();
 	}
 
-	private boolean isRunning() {
+	private boolean isAlreadyStarted() {
 		return nodeId != null;
 	}
 
@@ -169,18 +174,49 @@ public class Ci {
 		}
 	}
 
-	private void startCommandProcessor() {
-		this.commandProcessor = new CommandProcessor(this);
-		startNewThread(commandProcessor);
-	}
-
 	private void startRepositoryProcessor() {
 		this.repositoryProcessor = new RepositoryProcessor(this);
 		startNewThread(repositoryProcessor);
 	}
 
 	private boolean processorsIsRunning() {
-		return commandProcessor.isRunning() && repositoryProcessor.isRunning();
+		return repositoryProcessor.isRunning();
+	}
+
+	private void lifecycle() {
+		while (state == State.RUNNING) {
+			sleep();
+		}
+		try {
+			if (state == State.RESTARTING) {
+				shutdown(true);
+			} else {
+				shutdown(false);
+			}
+		} finally {
+			this.state = State.STOPPED;
+		}
+	}
+
+	private void shutdown(boolean restart) {
+		LOGGER.debug("CI server shutting down...");
+		try {
+			stopProcessors();
+			stopJobRunners();
+			do {
+				sleep();
+			} while (processorsIsNotStopped() && jobRunnersIsNotStopped());
+		} finally {
+			try {
+				this.data.shutdown();
+			} finally {
+				this.nodeId = null;
+			}
+		}
+		LOGGER.debug("CI server shutdown completed!");
+		if (restart) {
+			new Ci(this).start();
+		}
 	}
 
 	private void startNewThread(Runnable target) {
@@ -193,38 +229,15 @@ public class Ci {
 	}
 
 	public void shutdown() {
-		shutdown(false);
+		this.state = State.SHUTDOWN;
 	}
 
 	public void restart() {
-		shutdown(true);
-	}
-
-	private void shutdown(boolean restart) {
-		startNewThread(() -> {
-			LOGGER.debug("CI server shutting down...");
-			try {
-				stopProcessors();
-				stopJobRunners();
-				do {
-					sleep();
-				} while (processorsIsNotStopped() && jobRunnersIsNotStopped());
-			} finally {
-				try {
-					this.data.shutdown();
-				} finally {
-					this.nodeId = null;
-				}
-			}
-			LOGGER.debug("CI server shutdown completed!");
-			if (restart) {
-				new Ci(this).start();
-			}
-		}, restart ? "restart" : "shutdown");
+		this.state = State.RESTARTING;
 	}
 
 	private void stopProcessors() {
-		commandProcessor.stop();
+		commandProcessor.stopSubscription();
 		repositoryProcessor.stop();
 		eventProcessor.stopSubscription();
 	}
@@ -244,7 +257,7 @@ public class Ci {
 	}
 
 	private boolean processorsIsNotStopped() {
-		return !commandProcessor.isStopped() || !repositoryProcessor.isStopped();
+		return !repositoryProcessor.isStopped();
 	}
 
 	private boolean jobRunnersIsNotStopped() {
@@ -254,5 +267,9 @@ public class Ci {
 			}
 		}
 		return true;
+	}
+
+	private enum State {
+		CREATED, RUNNING, RESTARTING, SHUTDOWN, STOPPED
 	}
 }

@@ -23,16 +23,16 @@ public class EventProcessor {
 		this.subscription = ci.eventQueue.subscribe(this::processEvent);
 	}
 
+	private void processEvent(Event event) {
+		LOGGER.debug("Event accepted: {}", event);
+		event.process(ci);
+		LOGGER.debug("Event processed");
+	}
+
 	public void stopSubscription() {
 		if (subscription != null && !subscription.isUnsubscribed()) {
 			subscription.unsubscribe();
 		}
 		this.subscription = null;
-	}
-
-	private void processEvent(Event event) {
-		LOGGER.debug("Event accepted: {}", event);
-		event.process(ci);
-		LOGGER.debug("Event processed");
 	}
 }

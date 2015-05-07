@@ -4,56 +4,85 @@ import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.command.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Observable;
+import rx.Subscriber;
+import rx.Subscription;
 
-import static no.lundesgaard.ci.processor.Processor.State.CREATED;
-import static no.lundesgaard.ci.processor.Processor.State.RUNNING;
-import static no.lundesgaard.ci.processor.Processor.State.STOPPED;
+import static rx.schedulers.Schedulers.computation;
 
-public class CommandProcessor extends Processor {
+public class CommandProcessor {
 	public static final Logger LOGGER = LoggerFactory.getLogger(CommandProcessor.class);
 
+	private final Ci ci;
+	private Observable<Command> observable = observable();
+	private Subscription subscription;
+
 	public CommandProcessor(Ci ci) {
-		super(ci);
+		this.ci = ci;
 	}
 
-	@Override
-	public void run() {
-		init();
+	@SuppressWarnings("Convert2MethodRef")
+	private Observable<Command> observable() {
+		return Observable
+				.<Command>create(subscriber -> onSubscribe(subscriber))
+				.subscribeOn(computation());
+	}
+
+	private void onSubscribe(Subscriber<? super Command> subscriber) {
 		try {
-			while (state == RUNNING) {
-				tryNextCommand();
-				sleep();
+			LOGGER.debug("Command processor started");
+			sleep();
+			while (!subscriber.isUnsubscribed()) {
+				Command nextCommand = nextCommand();
+				if (nextCommand != null) {
+					subscriber.onNext(nextCommand);
+				} else {
+					sleep();
+				}
 			}
 		} finally {
-			state = STOPPED;
 			LOGGER.debug("Command processor stopped");
 		}
 	}
 
-	private void init() {
-		if (state != CREATED) {
-			throw new IllegalStateException("Command processor is already running");
-		}
-		LOGGER.debug("Command processor started");
-		state = RUNNING;
-	}
-
-	private void tryNextCommand() {
-		Command command = null;
+	private Command nextCommand() {
 		try {
-			command = Command.nextFrom(ci.commandsPath);
+			return Command.nextFrom(ci.commandsPath);
 		} catch (IllegalArgumentException e) {
 			LOGGER.warn("Invalid command", e);
+			return null;
 		}
-		if (command == null) {
-			return;
+	}
+
+	public void startSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			throw new IllegalStateException("Command processor is already started");
 		}
+		this.subscription = observable.subscribe(this::processCommand);
+	}
+
+	private void processCommand(Command command) {
 		try {
 			command.validate();
 			LOGGER.debug("Command accepted: {}", command);
 			command.execute(ci);
 		} catch (IllegalStateException e) {
 			LOGGER.warn("Invalid command: {}", command, e);
+		}
+	}
+
+	public void stopSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			subscription.unsubscribe();
+		}
+		this.subscription = null;
+	}
+
+	private void sleep() {
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			// ignore exception
 		}
 	}
 }

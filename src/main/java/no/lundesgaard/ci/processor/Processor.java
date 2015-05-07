@@ -15,7 +15,6 @@ public abstract class Processor implements Runnable {
 
 	protected final Ci ci;
 	public State state;
-	private Subscription subscription;
 
 	public Processor(Ci ci) {
 		this.ci = ci;

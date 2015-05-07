@@ -1,6 +1,5 @@
 package no.lundesgaard.ci.model;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
@@ -11,7 +10,6 @@ import rx.functions.Action1;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
-import static org.apache.commons.lang3.builder.ToStringStyle.SHORT_PREFIX_STYLE;
 import static rx.schedulers.Schedulers.computation;
 
 public abstract class ObservableQueue<T> {
