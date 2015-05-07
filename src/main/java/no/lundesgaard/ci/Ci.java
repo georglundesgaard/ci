@@ -27,7 +27,6 @@ import java.nio.file.Paths;
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.isDirectory;
 import static no.lundesgaard.ci.model.Type.HAZELCAST;
-import static org.apache.commons.lang3.StringUtils.uncapitalize;
 
 public class Ci {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Ci.class);

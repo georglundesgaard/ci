@@ -2,12 +2,9 @@ package no.lundesgaard.ci.model.repository;
 
 import no.lundesgaard.ci.Ci;
 
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-
-import static java.util.stream.Collectors.toList;
 
 public final class Repositories {
 	private final Map<String, Repository> repositoryMap;

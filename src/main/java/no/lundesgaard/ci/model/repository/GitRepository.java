@@ -1,7 +1,6 @@
 package no.lundesgaard.ci.model.repository;
 
 import no.lundesgaard.ci.Ci;
-import no.lundesgaard.ci.model.event.RepositoryUpdatedEvent;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

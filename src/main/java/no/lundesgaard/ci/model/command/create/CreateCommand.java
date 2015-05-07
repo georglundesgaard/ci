@@ -2,7 +2,6 @@ package no.lundesgaard.ci.model.command.create;
 
 import no.lundesgaard.ci.model.command.Command;
 import no.lundesgaard.ci.model.command.CommandType;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.FileReader;
 import java.io.IOException;

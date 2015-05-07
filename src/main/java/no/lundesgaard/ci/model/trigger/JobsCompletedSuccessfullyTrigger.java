@@ -8,7 +8,6 @@ import no.lundesgaard.ci.model.task.Task;
 import no.lundesgaard.ci.model.task.TaskId;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

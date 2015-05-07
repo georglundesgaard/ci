@@ -17,9 +17,7 @@ public class ListGitRepoCommand extends ListCommand {
 		LOGGER.debug("{} {}", count, count == 1 ? "repository" : "repositories");
 		ci.repositories()
 				.stream()
-				.forEach(repository -> {
-					LOGGER.debug("{}", repository);
-				});
+				.forEach(repository -> LOGGER.debug("{}", repository));
 	}
 
 	@Override
