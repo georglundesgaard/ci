@@ -7,13 +7,13 @@ import no.lundesgaard.ci.model.repository.Repositories;
 import no.lundesgaard.ci.model.task.Tasks;
 
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SimpleData implements Data {
 	private final Repositories repositories = new Repositories(new HashMap<>());
 	private final Tasks tasks = new Tasks(new HashMap<>());
 	private final Jobs jobs = new Jobs(new HashMap<>());
-	private final JobQueue jobQueue = new JobQueue(new LinkedList<>());
+	private final JobQueue jobQueue = new JobQueue(new LinkedBlockingQueue<>());
 
 	@Override
 	public String nodeId() {

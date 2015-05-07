@@ -8,17 +8,17 @@ import rx.Subscription;
 import rx.functions.Action1;
 
 import java.util.NoSuchElementException;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 
 import static rx.schedulers.Schedulers.computation;
 
 public abstract class ObservableQueue<T> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(ObservableQueue.class);
 
-	private final Queue<T> queue;
+	private final BlockingQueue<T> queue;
 	private final Observable<T> observable = observable();
 
-	public ObservableQueue(Queue<T> queue) {
+	public ObservableQueue(BlockingQueue<T> queue) {
 		this.queue = queue;
 	}
 
