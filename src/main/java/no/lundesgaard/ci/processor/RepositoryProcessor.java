@@ -1,42 +1,74 @@
 package no.lundesgaard.ci.processor;
 
 import no.lundesgaard.ci.Ci;
+import no.lundesgaard.ci.model.event.RepositoryUpdatedEvent;
+import no.lundesgaard.ci.model.repository.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Observable;
+import rx.Subscriber;
+import rx.Subscription;
 
-import static no.lundesgaard.ci.processor.Processor.State.CREATED;
-import static no.lundesgaard.ci.processor.Processor.State.RUNNING;
-import static no.lundesgaard.ci.processor.Processor.State.STOPPED;
+import static rx.schedulers.Schedulers.computation;
 
-public class RepositoryProcessor extends Processor {
+public class RepositoryProcessor {
 	private static final Logger LOGGER = LoggerFactory.getLogger(RepositoryProcessor.class);
 
+	private final Ci ci;
+	private final Observable<Repository> observable = observable();
+	private Subscription subscription;
+
 	public RepositoryProcessor(Ci ci) {
-		super(ci);
+		this.ci = ci;
 	}
 
-	@Override
-	public void run() {
-		init();
+	@SuppressWarnings("Convert2MethodRef")
+	private Observable<Repository> observable() {
+		return Observable
+				.<Repository>create(subscriber -> onSubscribe(subscriber))
+				.subscribeOn(computation());
+	}
+
+	private void onSubscribe(Subscriber<? super Repository> subscriber) {
 		try {
-			while (state == RUNNING) {
-				int repositoriesScanned = ci.repositories().scan(ci);
+			LOGGER.debug("Repository processor started");
+			sleep();
+			while (!subscriber.isUnsubscribed()) {
+				int repositoriesScanned = ci.repositories().scan(ci, subscriber::onNext);
 				if (repositoriesScanned > 0) {
 					LOGGER.debug("Repositories scanned: {}", repositoriesScanned);
 				}
 				sleep();
+				//
 			}
 		} finally {
-			state = STOPPED;
 			LOGGER.debug("Repository processor stopped");
 		}
 	}
 
-	private void init() {
-		if (state != CREATED) {
-			throw new IllegalStateException("Repository processor is already running");
+	public void startSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			throw new IllegalStateException("Repositoru processor is already started");
 		}
-		LOGGER.debug("Repository processor started");
-		state = RUNNING;
+		this.subscription = observable.subscribe(this::processRepositoryUpdated);
+	}
+
+	private void processRepositoryUpdated(Repository repository) {
+		ci.eventQueue.addItem(new RepositoryUpdatedEvent(repository.name, repository.lastCommitId()));
+	}
+
+	public void stopSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			subscription.unsubscribe();
+		}
+		this.subscription = null;
+	}
+
+	private void sleep() {
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			// ignore exception
+		}
 	}
 }

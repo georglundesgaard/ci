@@ -14,7 +14,7 @@ public class CommandProcessor {
 	public static final Logger LOGGER = LoggerFactory.getLogger(CommandProcessor.class);
 
 	private final Ci ci;
-	private Observable<Command> observable = observable();
+	private final Observable<Command> observable = observable();
 	private Subscription subscription;
 
 	public CommandProcessor(Ci ci) {

@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.function.Consumer;
 
 import static java.lang.ProcessBuilder.Redirect.appendTo;
 import static java.lang.String.format;
@@ -41,7 +42,7 @@ public class GitRepository extends Repository {
 	}
 
 	@Override
-	public Repository scan(Ci ci) {
+	public Repository scan(Ci ci, Consumer<Repository> onRepositoryUpdated) {
 		try {
 			LOGGER.debug("Scanning repository: {}", this.name);
 			Path repositoryPath = ci.repositoriesPath.resolve(this.name);
@@ -57,8 +58,9 @@ public class GitRepository extends Repository {
 			String lastCommitId = findLastCommitId(repositoryPath);
 			if (!lastCommitId.equals(this.lastCommitId)) {
 				LOGGER.debug("Repository has new changes (lastCommitId={})", lastCommitId);
-				ci.eventQueue.addItem(new RepositoryUpdatedEvent(this.name, lastCommitId));
-				return new GitRepository(this, now(), null, lastCommitId);
+				Repository updatedRepository =  new GitRepository(this, now(), null, lastCommitId);
+				onRepositoryUpdated.accept(this);
+				return updatedRepository;
 			}
 			LOGGER.debug("Repository up-to-date (lastCommitId={})", lastCommitId);
 			return new GitRepository(this, now());
@@ -66,6 +68,11 @@ public class GitRepository extends Repository {
 			LOGGER.error("Failed to clone/update repository", e);
 			return new GitRepository(this, now(), e.getMessage(), this.lastCommitId);
 		}
+	}
+
+	@Override
+	public String lastCommitId() {
+		return lastCommitId;
 	}
 
 	private boolean isEmpty(Path repositoryPath) {

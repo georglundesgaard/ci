@@ -42,7 +42,7 @@ public class Ci {
 	private Data data;
 	public final EventQueue eventQueue = new EventQueue();
 	private final CommandProcessor commandProcessor;
-	private RepositoryProcessor repositoryProcessor;
+	private final RepositoryProcessor repositoryProcessor;
 	private final EventProcessor eventProcessor;
 	private State state;
 
@@ -84,6 +84,7 @@ public class Ci {
 		this.workspacesPath = rootPath.resolve("workspaces");
 		this.jobRunners = new JobRunner[jobRunnerCount];
 		this.commandProcessor = new CommandProcessor(this);
+		this.repositoryProcessor = new RepositoryProcessor(this);
 		this.eventProcessor = new EventProcessor(this);
 		this.state = State.CREATED;
 	}
@@ -118,11 +119,9 @@ public class Ci {
 		initData();
 		initJobRunners();
 		commandProcessor.startSubscription();
-		startRepositoryProcessor();
+		repositoryProcessor.startSubscription();
 		eventProcessor.startSubscription();
-		do {
-			sleep();
-		} while (!processorsIsRunning());
+		sleep();
 		LOGGER.debug("CI server started");
 		this.state = State.RUNNING;
 		lifecycle();
@@ -174,15 +173,6 @@ public class Ci {
 		}
 	}
 
-	private void startRepositoryProcessor() {
-		this.repositoryProcessor = new RepositoryProcessor(this);
-		startNewThread(repositoryProcessor);
-	}
-
-	private boolean processorsIsRunning() {
-		return repositoryProcessor.isRunning();
-	}
-
 	private void lifecycle() {
 		while (state == State.RUNNING) {
 			sleep();
@@ -205,7 +195,7 @@ public class Ci {
 			stopJobRunners();
 			do {
 				sleep();
-			} while (processorsIsNotStopped() && jobRunnersIsNotStopped());
+			} while (jobRunnersIsNotStopped());
 		} finally {
 			try {
 				this.data.shutdown();
@@ -219,15 +209,6 @@ public class Ci {
 		}
 	}
 
-	private void startNewThread(Runnable target) {
-		String name = uncapitalize(target.getClass().getSimpleName());
-		startNewThread(target, name);
-	}
-
-	private void startNewThread(Runnable target, String name) {
-		new Thread(target, name).start();
-	}
-
 	public void shutdown() {
 		this.state = State.SHUTDOWN;
 	}
@@ -238,7 +219,7 @@ public class Ci {
 
 	private void stopProcessors() {
 		commandProcessor.stopSubscription();
-		repositoryProcessor.stop();
+		repositoryProcessor.stopSubscription();
 		eventProcessor.stopSubscription();
 	}
 
@@ -256,17 +237,13 @@ public class Ci {
 		}
 	}
 
-	private boolean processorsIsNotStopped() {
-		return !repositoryProcessor.isStopped();
-	}
-
 	private boolean jobRunnersIsNotStopped() {
 		for (JobRunner jobRunner : jobRunners) {
 			if (jobRunner.isRunning()) {
-				return false;
+				return true;
 			}
 		}
-		return true;
+		return false;
 	}
 
 	private enum State {

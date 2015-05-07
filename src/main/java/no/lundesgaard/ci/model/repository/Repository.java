@@ -14,6 +14,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.function.Consumer;
 
 import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.nio.file.Files.copy;
@@ -50,7 +51,9 @@ public abstract class Repository implements Serializable {
 		return lastScan == null || now().isAfter(lastScan.plus(scanInterval));
 	}
 
-	public abstract Repository scan(Ci ci);
+	public abstract Repository scan(Ci ci, Consumer<Repository> onRepositoryUpdated);
+
+	public abstract String lastCommitId();
 
 	@Override
 	public String toString() {

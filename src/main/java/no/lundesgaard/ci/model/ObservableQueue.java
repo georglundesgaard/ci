@@ -9,6 +9,7 @@ import rx.functions.Action1;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static rx.schedulers.Schedulers.computation;
 
@@ -58,10 +59,13 @@ public abstract class ObservableQueue<T> {
 			return null;
 		}
 		try {
-			return queue.remove();
+			return queue.poll(100, TimeUnit.MILLISECONDS);
 		} catch (NoSuchElementException e) {
-			return null;
+			// do nothing
+		} catch (InterruptedException e) {
+			LOGGER.debug("Interrupted waiting for next item");
 		}
+		return null;
 	}
 
 	private void sleep() {

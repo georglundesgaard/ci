@@ -4,6 +4,7 @@ import no.lundesgaard.ci.Ci;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -28,13 +29,16 @@ public final class Repositories {
 		return repositoryMap.values().stream();
 	}
 
-	public int scan(Ci ci) {
-		List<Repository> scannedRepositories = stream()
+	public int scan(Ci ci, Consumer<Repository> onRepositoryUpdated) {
+		int[] scannedRepositories = { 0 };
+		stream()
 				.filter(repository -> repository.nodeId.equals(ci.nodeId()) && repository.readyForScan())
-				.map(repository -> repository.scan(ci))
-				.collect(toList());
-		scannedRepositories.forEach(this::repository);
-		return scannedRepositories.size();
+				.map(repository -> repository.scan(ci, onRepositoryUpdated))
+				.forEach(repository -> {
+					repository(repository);
+					scannedRepositories[0]++;
+				});
+		return scannedRepositories[0];
 	}
 
 	public int count() {
