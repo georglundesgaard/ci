@@ -57,7 +57,7 @@ public class GitRepository extends Repository {
 			String lastCommitId = findLastCommitId(repositoryPath);
 			if (!lastCommitId.equals(this.lastCommitId)) {
 				LOGGER.debug("Repository has new changes (lastCommitId={})", lastCommitId);
-				ci.eventQueue.add(new RepositoryUpdatedEvent(this.name, lastCommitId));
+				ci.eventQueue.addItem(new RepositoryUpdatedEvent(this.name, lastCommitId));
 				return new GitRepository(this, now(), null, lastCommitId);
 			}
 			LOGGER.debug("Repository up-to-date (lastCommitId={})", lastCommitId);

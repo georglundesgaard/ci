@@ -4,46 +4,35 @@ import no.lundesgaard.ci.Ci;
 import no.lundesgaard.ci.model.event.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Subscription;
 
-import static no.lundesgaard.ci.processor.Processor.State.CREATED;
-import static no.lundesgaard.ci.processor.Processor.State.RUNNING;
-import static no.lundesgaard.ci.processor.Processor.State.STOPPED;
-
-public class EventProcessor extends Processor {
+public class EventProcessor {
 	private static final Logger LOGGER = LoggerFactory.getLogger(EventProcessor.class);
 
+	private final Ci ci;
+	private Subscription subscription;
+
 	public EventProcessor(Ci ci) {
-		super(ci);
+		this.ci = ci;
 	}
 
-	@Override
-	public void run() {
-		init();
-		try {
-			while (state == RUNNING) {
-				processEvents();
-				sleep();
-			}
-		} finally {
-			state = STOPPED;
-			LOGGER.debug("Event processor stopped");
+	public void startSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			throw new IllegalStateException("Event queue subscription already started");
 		}
+		this.subscription = ci.eventQueue.subscribe(this::processEvent);
 	}
 
-	private void init() {
-		if (state != CREATED) {
-			throw new IllegalStateException("Event processor is already running");
+	public void stopSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			subscription.unsubscribe();
 		}
-		LOGGER.debug("Event processor started");
-		state = RUNNING;
+		this.subscription = null;
 	}
 
-	private void processEvents() {
-		Event event;
-		while ((event = ci.eventQueue.next()) != null) {
-			LOGGER.debug("Event accepted: {}", event);
-			event.process(ci);
-			LOGGER.debug("Event processed");
-		}
+	private void processEvent(Event event) {
+		LOGGER.debug("Event accepted: {}", event);
+		event.process(ci);
+		LOGGER.debug("Event processed");
 	}
 }

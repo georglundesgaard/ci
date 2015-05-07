@@ -1,59 +1,71 @@
 package no.lundesgaard.ci;
 
 import no.lundesgaard.ci.model.job.Job;
+import no.lundesgaard.ci.model.job.JobId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Subscription;
 
-import static no.lundesgaard.ci.model.job.JobId.jobId;
-
-public class JobRunner implements Runnable {
+public class JobRunner {
 	private static final Logger LOGGER = LoggerFactory.getLogger(JobRunner.class);
 
 	private final Ci ci;
-	private Job job;
+	private JobId jobId;
 	private Process process;
+	private Subscription subscription;
 
-	public JobRunner(Ci ci, Job job) {
+	public JobRunner(Ci ci) {
 		this.ci = ci;
-		this.job = job;
 	}
 
-	public String name() {
-		return "jobRunner-" + job.id;
-	}
-
-	@Override
-	public void run() {
-		if (process != null) {
-			throw new IllegalStateException("Job runner is already started");
+	public void startSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			throw new IllegalStateException("Job queue subscription already started");
 		}
-		startJob();
+		this.subscription = ci.jobQueue().subscribe(this::runJob);
+	}
+
+	public void stopSubscription() {
+		if (subscription != null && !subscription.isUnsubscribed()) {
+			subscription.unsubscribe();
+		}
+		this.subscription = null;
+	}
+
+	public boolean isRunning() {
+		return process != null && process.isAlive();
+	}
+
+	private void runJob(JobId jobId) {
+		this.jobId = jobId;
+		this.process = startJob();
 		waitForProcessToFinish();
 	}
 
-	private void startJob() {
+	private Process startJob() {
 		LOGGER.debug("Starting job...");
-		process = job.start(ci);
-		job = ci.jobs().job(jobId(job));
+		Job job = ci.jobs().job(jobId);
+		Process process = job.start(ci);
 		LOGGER.debug("Job started");
+		return process;
 	}
 
 	private void waitForProcessToFinish() {
 		LOGGER.debug("Waiting for process to terminate");
 		try {
 			int exitCode = process.waitFor();
+			Job job = ci.jobs().job(jobId);
 			if (exitCode == 0) {
-				job = job.complete(ci);
+				job.complete(ci);
 			} else {
-				job = job.fail(ci, exitCode);
+				job.fail(ci, exitCode);
 			}
 			LOGGER.debug("Process terminated. Exit code: {}", exitCode);
 		} catch (InterruptedException e) {
 			LOGGER.warn("Wait for process termination was interrupted.", e);
+		} finally {
+			this.process = null;
+			this.jobId = null;
 		}
-	}
-
-	public boolean isRunning() {
-		return process != null && process.isAlive();
 	}
 }

@@ -52,7 +52,7 @@ public class Job implements Serializable {
 	public final Set<JobId> previousJobs;
 
 	public static Job create(Ci ci, TaskId taskId, JobId... previousJobs) {
-		int jobNumber = ci.nextJobNumberFor(taskId);
+		int jobNumber = taskId.nextJobNumber(ci);
 		Job job = new Job(taskId, jobNumber, previousJobs);
 		LOGGER.debug("Created: {}", job);
 		return ci.jobs().job(job);
@@ -104,7 +104,7 @@ public class Job implements Serializable {
 	public Job queue(Ci ci) {
 		verifyState(CREATED);
 		Job job = updateJob(ci, WAITING, null);
-		ci.jobQueue().add(jobId(job));
+		ci.jobQueue().addItem(jobId(job));
 		LOGGER.debug("Queued: {}", job);
 		return job;
 	}
@@ -122,7 +122,7 @@ public class Job implements Serializable {
 	public Job complete(Ci ci) {
 		verifyState(RUNNING);
 		Job job = updateJob(ci, COMPLETED, null);
-		ci.eventQueue.add(new JobCompletedEvent(jobId(job)));
+		ci.eventQueue.addItem(new JobCompletedEvent(jobId(job)));
 		LOGGER.debug("Completed: {}", job);
 		return job;
 	}

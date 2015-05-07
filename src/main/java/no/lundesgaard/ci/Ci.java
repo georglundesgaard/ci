@@ -11,12 +11,10 @@ import no.lundesgaard.ci.model.event.EventQueue;
 import no.lundesgaard.ci.model.job.JobQueue;
 import no.lundesgaard.ci.model.job.Jobs;
 import no.lundesgaard.ci.model.repository.Repositories;
-import no.lundesgaard.ci.model.task.TaskId;
 import no.lundesgaard.ci.model.task.Tasks;
 import no.lundesgaard.ci.processor.CommandProcessor;
 import no.lundesgaard.ci.processor.EventProcessor;
 import no.lundesgaard.ci.processor.RepositoryProcessor;
-import no.lundesgaard.ci.subscriber.JobSubscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,13 +37,13 @@ public class Ci {
 	public final Path commandsPath;
 	public final Path workspacesPath;
 	private final Type type;
+	private final JobRunner[] jobRunners;
 	private String nodeId;
 	private Data data;
 	public final EventQueue eventQueue = new EventQueue();
 	private CommandProcessor commandProcessor;
-	private JobSubscriber jobSubscriber;
 	private RepositoryProcessor repositoryProcessor;
-	private EventProcessor eventProcessor;
+	private final EventProcessor eventProcessor;
 
 	public static void main(String[] args) {
 		CiOptions ciOptions = new CiOptions(args);
@@ -57,16 +55,17 @@ public class Ci {
 	}
 
 	public Ci(CiOptions ciOptions) {
-		this(ciOptions.type, ciOptions.root);
+		this(ciOptions.type, ciOptions.root, ciOptions.jobRunners);
 	}
 
 	private Ci(Ci oldCi) {
-		this(oldCi.type, oldCi.rootPath.toString());
+		this(oldCi.type, oldCi.rootPath.toString(), oldCi.jobRunners.length);
 	}
 
-	public Ci(Type type, String root) {
+	public Ci(Type type, String root, int jobRunnerCount) {
 		LOGGER.debug("type: {}", type);
 		LOGGER.debug("root: {}", root);
+		LOGGER.debug("jobRunners: {}", jobRunnerCount);
 		this.type = type;
 		this.rootPath = Paths.get(root);
 		if (!exists(rootPath)) {
@@ -82,6 +81,8 @@ public class Ci {
 		this.repositoriesPath = rootPath.resolve("repositories");
 		this.commandsPath = rootPath.resolve("commands");
 		this.workspacesPath = rootPath.resolve("workspaces");
+		this.jobRunners = new JobRunner[jobRunnerCount];
+		this.eventProcessor = new EventProcessor(this);
 	}
 
 	public String nodeId() {
@@ -112,13 +113,13 @@ public class Ci {
 		LOGGER.debug("CI server starting...");
 		createDirectoriesIfNotExists();
 		initData();
+		initJobRunners();
 		startCommandProcessor();
-		startJobSubscriber();
 		startRepositoryProcessor();
-		startEventProcessor();
+		eventProcessor.startSubscription();
 		do {
 			sleep();
-		} while (processorsIsNotStarted());
+		} while (!processorsIsRunning());
 		LOGGER.debug("CI server started");
 	}
 
@@ -161,14 +162,16 @@ public class Ci {
 		LOGGER.debug("Node id: {}", nodeId);
 	}
 
+	private void initJobRunners() {
+		for (int i = 0; i < jobRunners.length; i++) {
+			jobRunners[i] = new JobRunner(this);
+			jobRunners[i].startSubscription();
+		}
+	}
+
 	private void startCommandProcessor() {
 		this.commandProcessor = new CommandProcessor(this);
 		startNewThread(commandProcessor);
-	}
-
-	private void startJobSubscriber() {
-		this.jobSubscriber = new JobSubscriber(this);
-		jobSubscriber.start();
 	}
 
 	private void startRepositoryProcessor() {
@@ -176,15 +179,8 @@ public class Ci {
 		startNewThread(repositoryProcessor);
 	}
 
-	private void startEventProcessor() {
-		this.eventProcessor = new EventProcessor(this);
-		startNewThread(eventProcessor);
-	}
-
-	private boolean processorsIsNotStarted() {
-		return !commandProcessor.isStarted()
-				&& !repositoryProcessor.isStarted()
-				&& !eventProcessor.isStarted();
+	private boolean processorsIsRunning() {
+		return commandProcessor.isRunning() && repositoryProcessor.isRunning();
 	}
 
 	private void startNewThread(Runnable target) {
@@ -208,11 +204,11 @@ public class Ci {
 		startNewThread(() -> {
 			LOGGER.debug("CI server shutting down...");
 			try {
-				stopSubscribers();
 				stopProcessors();
+				stopJobRunners();
 				do {
 					sleep();
-				} while (isSubscribersActive() || processorsIsNotStopped());
+				} while (processorsIsNotStopped() && jobRunnersIsNotStopped());
 			} finally {
 				try {
 					this.data.shutdown();
@@ -227,40 +223,36 @@ public class Ci {
 		}, restart ? "restart" : "shutdown");
 	}
 
-	private void stopSubscribers() {
-		jobSubscriber.stop();
-	}
-
 	private void stopProcessors() {
 		commandProcessor.stop();
 		repositoryProcessor.stop();
-		eventProcessor.stop();
+		eventProcessor.stopSubscription();
+	}
+
+	private void stopJobRunners() {
+		for (JobRunner jobRunner : jobRunners) {
+			jobRunner.stopSubscription();
+		}
 	}
 
 	private void sleep() {
 		try {
-			Thread.sleep(1000);
+			Thread.sleep(100);
 		} catch (InterruptedException e) {
 			LOGGER.warn("Sleep interrupted", e);
 		}
 	}
 
-	private boolean isSubscribersActive() {
-		return jobSubscriber.isActive();
-	}
-
 	private boolean processorsIsNotStopped() {
-		return !commandProcessor.isStopped()
-				|| !repositoryProcessor.isStopped()
-				|| !eventProcessor.isStopped();
+		return !commandProcessor.isStopped() || !repositoryProcessor.isStopped();
 	}
 
-	public int nextJobNumberFor(TaskId taskId) {
-		return jobs()
-				.stream()
-				.filter(job -> job.taskId.equals(taskId))
-				.mapToInt(job -> job.jobNumber)
-				.max().orElse(0) + 1;
-
+	private boolean jobRunnersIsNotStopped() {
+		for (JobRunner jobRunner : jobRunners) {
+			if (jobRunner.isRunning()) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

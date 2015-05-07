@@ -1,5 +1,6 @@
 package no.lundesgaard.ci.model.task;
 
+import no.lundesgaard.ci.Ci;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -18,6 +19,14 @@ public final class TaskId implements Serializable {
 
 	private TaskId(String id) {
 		this.id = id;
+	}
+
+	public int nextJobNumber(Ci ci) {
+		return ci.jobs()
+				.stream()
+				.filter(job -> job.taskId.equals(this))
+				.mapToInt(job -> job.jobNumber)
+				.max().orElse(0) + 1;
 	}
 
 	@Override

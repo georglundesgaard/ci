@@ -15,11 +15,14 @@ import static no.lundesgaard.ci.model.Type.SIMPLE;
 public class CiOptions {
 	private static final String ROOT = "root";
 	private static final String TYPE = "type";
+	private static final String JOB_RUNNERS = "job-runners";
 	private static final String HELP = "help";
+	private static final Integer DEFAULT_JOB_RUNNERS = 1;
 
 	private final Options options;
 	public final Type type;
 	public final String root;
+	public final Integer jobRunners;
 
 	public CiOptions(String... args) {
 		this.options = options();
@@ -27,9 +30,11 @@ public class CiOptions {
 		if (commandLine == null || commandLine.hasOption(HELP)) {
 			this.type = null;
 			this.root = null;
+			this.jobRunners = null;
 		} else {
 			this.type = type(commandLine);
 			this.root = root(commandLine);
+			this.jobRunners = jobRunners(commandLine);
 		}
 	}
 
@@ -37,6 +42,7 @@ public class CiOptions {
 		Options options = new Options();
 		options.addOption(rootOption());
 		options.addOption(typeOption());
+		options.addOption(jobRunnersOption());
 		options.addOption(helpOption());
 		return options;
 	}
@@ -49,6 +55,10 @@ public class CiOptions {
 
 	private Option typeOption() {
 		return new Option("t", TYPE, true, "Type: simple or hazelcast");
+	}
+
+	private Option jobRunnersOption() {
+		return new Option("j", JOB_RUNNERS, true, "Job runner count");
 	}
 
 	private Option helpOption() {
@@ -67,17 +77,21 @@ public class CiOptions {
 	}
 
 	private static Type type(CommandLine commandLine) {
-		Type type;
 		if (commandLine.hasOption(TYPE)) {
-			type = Type.valueOf(commandLine.getOptionValue(TYPE).toUpperCase());
-		} else {
-			type = SIMPLE;
+			return Type.valueOf(commandLine.getOptionValue(TYPE).toUpperCase());
 		}
-		return type;
+		return SIMPLE;
 	}
 
 	private static String root(CommandLine commandLine) {
 		return commandLine.getOptionValue(ROOT);
+	}
+
+	private static Integer jobRunners(CommandLine commandLine) {
+		if (commandLine.hasOption(JOB_RUNNERS)) {
+			return Integer.valueOf(commandLine.getOptionValue(JOB_RUNNERS));
+		}
+		return DEFAULT_JOB_RUNNERS;
 	}
 
 	public boolean isValid() {
