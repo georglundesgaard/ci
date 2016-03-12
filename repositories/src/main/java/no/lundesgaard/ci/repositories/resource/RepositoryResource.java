@@ -7,6 +7,9 @@ public class RepositoryResource extends ResourceSupport {
 	private String url;
 	private CommitResource lastCommit;
 
+	public RepositoryResource() {
+	}
+
 	public RepositoryResource(String name, String url, CommitResource lastCommit) {
 		this.name = name;
 		this.url = url;
