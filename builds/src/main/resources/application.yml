@@ -1,0 +1,8 @@
+server:
+  context-path: "/builds"
+  port: 8080
+spring:
+  jackson:
+    serialization:
+      indent_output: true
+      write-dates-as-timestamps: false

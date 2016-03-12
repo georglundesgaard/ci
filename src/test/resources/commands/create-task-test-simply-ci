@@ -1,9 +1,0 @@
-type=task
-name=test-simply-ci
-trigger.type=JOBS_COMPLETED_SUCCESSFULLY
-trigger.tasks=build-simply-ci
-workspace.type=PREVIOUS_JOBS
-script=#!/bin/bash\n\
-set -e\n\
-cd simply-ci\n\
-mvn test\n
